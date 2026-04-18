@@ -1,6 +1,7 @@
 // Cart page — shows items, quantity controls, per-line subtotals, and checkout link
 import { Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
+import Meta from '../components/Meta'
 
 export default function Cart() {
   const { items, removeItem, updateQty, total } = useCart()
@@ -8,6 +9,7 @@ export default function Cart() {
   if (items.length === 0) {
     return (
       <main className="max-w-2xl mx-auto px-4 py-24 text-center">
+        <Meta title="Cart" noIndex />
         <img src="/images/Logo1.png" alt="" className="h-20 w-20 object-contain mx-auto mb-6 opacity-40" />
         <p className="font-serif text-2xl text-rose-deep dark:text-rose-dust mb-2">Your cart is empty</p>
         <p className="text-gray-500 mb-6">Looks like you haven't added anything yet.</p>
@@ -18,6 +20,7 @@ export default function Cart() {
 
   return (
     <main className="max-w-2xl mx-auto px-4 py-12">
+      <Meta title="Cart" noIndex />
       <h1 className="font-serif text-3xl text-rose-deep dark:text-rose-dust mb-8">Your Cart</h1>
 
       <ul className="divide-y divide-rose-dust/20">
@@ -72,15 +75,20 @@ export default function Cart() {
         ))}
       </ul>
 
-      {/* total + checkout */}
+      {/* total + actions */}
       <div className="mt-8 pt-6 border-t border-rose-dust/30 flex justify-between items-center">
         <div>
           <p className="text-sm text-gray-500">Order total</p>
           <p className="text-2xl font-semibold">R {total.toFixed(2)}</p>
         </div>
-        <Link to="/checkout" className="btn-primary py-3 px-8">
-          Proceed to Checkout
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link to="/" className="btn-secondary py-3 px-5">
+            Continue Shopping
+          </Link>
+          <Link to="/checkout" className="btn-primary py-3 px-8">
+            Proceed to Checkout
+          </Link>
+        </div>
       </div>
     </main>
   )

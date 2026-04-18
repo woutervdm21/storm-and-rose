@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 import { useCart } from '../context/CartContext'
+import Meta from '../components/Meta'
 
 export default function ProductDetail() {
   const { id } = useParams()
@@ -42,6 +43,11 @@ export default function ProductDetail() {
 
   return (
     <main className="max-w-5xl mx-auto px-4 py-10">
+      <Meta
+        title={product.name}
+        description={product.description}
+        image={product.image_url}
+      />
 
       {/* breadcrumb */}
       <Link to="/" className="inline-flex items-center gap-1 text-sm text-rose-mid hover:text-rose-deep dark:hover:text-rose-dust transition-colors mb-8">

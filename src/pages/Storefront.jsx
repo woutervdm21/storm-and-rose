@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import ProductCard from '../components/ProductCard'
+import Meta from '../components/Meta'
 
 export default function Storefront() {
   const [products, setProducts] = useState([])
@@ -18,6 +19,7 @@ export default function Storefront() {
 
   return (
     <main>
+      <Meta />
       {/* hero — rose tint in light mode, deep rose tint in dark to distinguish from page bg */}
       <section className="bg-rose-dust/15 dark:bg-rose-deep/20 py-16 px-4 text-center border-b border-rose-dust/20">
         <h1 className="font-serif text-4xl md:text-5xl text-rose-deep dark:text-rose-dust mb-3">

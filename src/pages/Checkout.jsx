@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 import { useCart } from '../context/CartContext'
+import Meta from '../components/Meta'
 
 const SA_PROVINCES = [
   'Eastern Cape', 'Free State', 'Gauteng', 'KwaZulu-Natal',
@@ -86,6 +87,7 @@ export default function Checkout() {
 
   return (
     <main className="max-w-lg mx-auto px-4 py-12">
+      <Meta title="Checkout" noIndex />
       <h1 className="font-serif text-3xl text-rose-deep dark:text-rose-dust mb-8">Checkout</h1>
 
       <form onSubmit={handleSubmit} className="flex flex-col gap-6">

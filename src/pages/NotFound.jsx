@@ -1,9 +1,11 @@
 // 404 page — shown for any unmatched route
 import { Link } from 'react-router-dom'
+import Meta from '../components/Meta'
 
 export default function NotFound() {
   return (
     <main className="max-w-lg mx-auto px-4 py-24 text-center">
+      <Meta title="Page Not Found" noIndex />
       <img src="/images/Logo1.png" alt="" className="h-20 w-20 object-contain mx-auto mb-6 opacity-30" />
       <h1 className="font-serif text-5xl text-rose-deep dark:text-rose-dust mb-2">404</h1>
       <p className="font-serif text-xl mb-2">Page not found</p>

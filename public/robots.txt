@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+Allow: /products/
+
+# no value in indexing transactional or admin pages
+Disallow: /cart
+Disallow: /checkout
+Disallow: /order-confirmation
+Disallow: /admin
+
+Sitemap: https://stormandrose.co.za/sitemap.xml

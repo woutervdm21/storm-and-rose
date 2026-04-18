@@ -1,5 +1,6 @@
 // Order confirmation page — shown after successful checkout, displays EFT payment instructions
 import { useLocation, Link } from 'react-router-dom'
+import Meta from '../components/Meta'
 
 // EFT banking details — update these before going live
 const EFT = {
@@ -25,6 +26,7 @@ export default function OrderConfirmation() {
 
   return (
     <main className="max-w-lg mx-auto px-4 py-12">
+      <Meta title="Order Confirmed" noIndex />
       <h1 className="font-serif text-3xl text-rose-deep dark:text-rose-dust mb-2">Thank You!</h1>
       <p className="mb-8">Your order has been placed. Please complete payment via EFT.</p>
 
