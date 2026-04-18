@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  /* reusable form input style */
+  .input-field {
+    @apply w-full border border-rose-dust/50 rounded-lg px-4 py-2 bg-cream dark:bg-navy focus:outline-none focus:border-rose-deep;
+  }
+
+  /* primary action button */
+  .btn-primary {
+    @apply bg-rose-deep hover:bg-rose-mid disabled:opacity-50 text-cream font-semibold py-2 px-5 rounded-lg transition-colors;
+  }
+
+  /* secondary / cancel button */
+  .btn-secondary {
+    @apply border border-rose-dust text-rose-deep dark:text-rose-dust hover:bg-rose-dust/10 font-semibold py-2 px-5 rounded-lg transition-colors;
+  }
+}
+
+@layer base {
+  body {
+    @apply bg-cream text-navy font-sans transition-colors duration-300;
+  }
+
+  /* dark mode body */
+  .dark body {
+    @apply bg-navy text-cream;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-serif;
+  }
+}
