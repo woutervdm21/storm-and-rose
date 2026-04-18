@@ -29,7 +29,7 @@ export default function AdminLogin() {
       return
     }
 
-    navigate('/admin/products')
+    navigate('/admin/analytics')
   }
 
   return (

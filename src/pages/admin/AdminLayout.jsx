@@ -17,8 +17,9 @@ export default function AdminLayout() {
         <div className="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-6">
             <span className="font-serif text-rose-deep dark:text-rose-dust text-sm tracking-wide">Admin</span>
-            <AdminNavLink to="/admin/products">Products</AdminNavLink>
+            <AdminNavLink to="/admin/analytics">Analytics</AdminNavLink>
             <AdminNavLink to="/admin/orders">Orders</AdminNavLink>
+            <AdminNavLink to="/admin/products">Products</AdminNavLink>
           </div>
 
           <div className="flex items-center gap-4">
