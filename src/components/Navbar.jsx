@@ -11,10 +11,10 @@ export default function Navbar() {
 
   return (
     <header className="border-b border-rose-dust/30 bg-cream dark:bg-navy transition-colors">
-      <nav className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between">
-        {/* logo */}
-        <Link to="/" className="flex items-center gap-3">
-          <img src="/images/Logo1.jpg" alt="Storm & Rose" className="h-9 w-9 rounded-full object-cover" />
+      <nav className="max-w-6xl mx-auto px-4 h-18 flex items-center justify-between">
+        {/* logo — use mauve stamp logo, no clip so the background ring doesn't show */}
+        <Link to="/" className="flex items-center gap-2">
+          <img src="/images/Logo1.png" alt="Storm & Rose" className="h-14 w-14 object-contain" />
           <span className="font-serif text-lg text-rose-deep dark:text-rose-dust tracking-wide hidden sm:block">
             Storm &amp; Rose
           </span>

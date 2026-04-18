@@ -1,5 +1,6 @@
 // Admin product management — list, create, edit, delete products and upload images
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { supabase } from '../../lib/supabase'
 
 const EMPTY_FORM = { name: '', description: '', price: '', stock: '' }
@@ -35,7 +36,7 @@ export default function AdminProducts() {
     if (imageFile) {
       const fileName = `${Date.now()}-${imageFile.name}`
       const { error: uploadError } = await supabase.storage.from(BUCKET).upload(fileName, imageFile)
-      if (uploadError) { setError('Image upload failed.'); setLoading(false); return }
+      if (uploadError) { toast.error('Image upload failed.'); setError('Image upload failed.'); setLoading(false); return }
       const { data: urlData } = supabase.storage.from(BUCKET).getPublicUrl(fileName)
       image_url = urlData.publicUrl
     }
@@ -43,11 +44,11 @@ export default function AdminProducts() {
     const payload = { ...form, price: parseFloat(form.price), stock: parseInt(form.stock), image_url }
 
     if (editId) {
-      // update existing product
       await supabase.from('products').update(payload).eq('id', editId)
+      toast.success(`${form.name} updated`)
     } else {
-      // insert new product
       await supabase.from('products').insert(payload)
+      toast.success(`${form.name} added`)
     }
 
     setForm(EMPTY_FORM)
@@ -59,26 +60,49 @@ export default function AdminProducts() {
 
   function startEdit(product) {
     setEditId(product.id)
-    setForm({ name: product.name, description: product.description, price: product.price, stock: product.stock })
+    setForm({ name: product.name, description: product.description, price: product.price, stock: product.stock, image_url: product.image_url })
+    // scroll form into view so the user can see the pre-filled fields
+    window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  async function handleDelete(id) {
+  async function handleDelete(id, name) {
     if (!confirm('Delete this product?')) return
     await supabase.from('products').delete().eq('id', id)
+    toast.success(`${name} deleted`)
     loadProducts()
   }
 
   return (
-    <main className="max-w-4xl mx-auto px-4 py-12">
+    <main className="max-w-5xl mx-auto px-4 py-12">
       <h1 className="font-serif text-3xl text-rose-deep dark:text-rose-dust mb-8">Products</h1>
 
-      {/* create / edit form */}
-      <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-12">
+      {/* create / edit form — highlighted in rose when editing */}
+      <form
+        onSubmit={handleSubmit}
+        className={`grid grid-cols-1 sm:grid-cols-2 gap-4 mb-12 p-6 rounded-xl border transition-colors ${
+          editId
+            ? 'border-rose-deep bg-rose-dust/10'
+            : 'border-rose-dust/20 bg-transparent'
+        }`}
+      >
+        {editId && (
+          <p className="sm:col-span-2 text-sm font-semibold text-rose-deep dark:text-rose-dust">
+            Editing product
+          </p>
+        )}
+
         <input name="name"        placeholder="Product name"    required value={form.name}        onChange={handleChange} className="input-field" />
         <input name="price"       placeholder="Price (R)"       required type="number" step="0.01" value={form.price}  onChange={handleChange} className="input-field" />
         <input name="stock"       placeholder="Stock qty"       required type="number" value={form.stock}       onChange={handleChange} className="input-field" />
         <input name="description" placeholder="Description"     value={form.description} onChange={handleChange} className="input-field sm:col-span-2" />
-        <input type="file" accept="image/*" onChange={e => setImageFile(e.target.files[0])} className="sm:col-span-2 text-sm" />
+
+        <div className="sm:col-span-2 flex items-center gap-4">
+          <input type="file" accept="image/*" onChange={e => setImageFile(e.target.files[0])} className="text-sm flex-1" />
+          {/* show current image thumbnail when editing */}
+          {editId && form.image_url && !imageFile && (
+            <img src={form.image_url} alt="current" className="h-12 w-12 object-cover rounded-lg border border-rose-dust/30" />
+          )}
+        </div>
 
         {error && <p className="text-red-500 text-sm sm:col-span-2">{error}</p>}
 
@@ -94,27 +118,43 @@ export default function AdminProducts() {
         </div>
       </form>
 
-      {/* product list */}
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left border-b border-rose-dust/30">
-            <th className="pb-2">Name</th><th className="pb-2">Price</th><th className="pb-2">Stock</th><th className="pb-2"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {products.map(p => (
-            <tr key={p.id} className="border-b border-rose-dust/10 hover:bg-rose-dust/5">
-              <td className="py-2">{p.name}</td>
-              <td className="py-2">R {Number(p.price).toFixed(2)}</td>
-              <td className="py-2">{p.stock}</td>
-              <td className="py-2 flex gap-3 justify-end">
-                <button onClick={() => startEdit(p)}    className="text-rose-mid hover:underline">Edit</button>
-                <button onClick={() => handleDelete(p.id)} className="text-red-400 hover:underline">Delete</button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+      {/* product card grid */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+        {products.map(p => (
+          <div
+            key={p.id}
+            className={`rounded-xl border overflow-hidden transition-all ${
+              editId === p.id
+                ? 'border-rose-deep ring-2 ring-rose-deep/40'
+                : 'border-rose-dust/20 hover:border-rose-dust/50'
+            }`}
+          >
+            {/* product image */}
+            {p.image_url ? (
+              <img src={p.image_url} alt={p.name} className="w-full h-32 object-cover" />
+            ) : (
+              <div className="w-full h-32 bg-rose-dust/10 flex items-center justify-center text-xs text-rose-dust/40">
+                No image
+              </div>
+            )}
+
+            <div className="p-3">
+              <p className="font-semibold text-sm truncate">{p.name}</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400">R {Number(p.price).toFixed(2)}</p>
+
+              {/* out of stock indicator */}
+              {p.stock === 0 && (
+                <p className="text-xs text-red-400 mt-0.5">Out of stock</p>
+              )}
+
+              <div className="flex gap-2 mt-3">
+                <button onClick={() => startEdit(p)} className="text-xs text-rose-mid hover:underline">Edit</button>
+                <button onClick={() => handleDelete(p.id, p.name)} className="text-xs text-red-400 hover:underline">Delete</button>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
     </main>
   )
 }

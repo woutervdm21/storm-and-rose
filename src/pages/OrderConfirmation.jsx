@@ -39,7 +39,16 @@ export default function OrderConfirmation() {
         <DetailRow label="Amount"     value={`R ${Number(total).toFixed(2)}`} />
       </div>
 
-      <p className="mt-6 text-sm text-gray-500 dark:text-gray-400">
+      {/* delivery address summary */}
+      <div className="mt-6 text-sm">
+        <p className="font-semibold mb-1">Delivery to:</p>
+        <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+          {order.shipping_line1}{order.shipping_line2 ? `, ${order.shipping_line2}` : ''}<br />
+          {order.shipping_city}, {order.shipping_province}, {order.shipping_postal}
+        </p>
+      </div>
+
+      <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
         Once payment reflects, we will update your order status and contact you at <strong>{order.customer_email}</strong>.
       </p>
 

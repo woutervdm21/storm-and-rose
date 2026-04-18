@@ -1,5 +1,6 @@
 // Product card used in the storefront grid — links to product detail page
 import { Link } from 'react-router-dom'
+import { toast } from 'sonner'
 import { useCart } from '../context/CartContext'
 
 export default function ProductCard({ product }) {
@@ -28,10 +29,17 @@ export default function ProductCard({ product }) {
         </Link>
         <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{product.description}</p>
 
-        <div className="flex items-center justify-between mt-4">
+        {/* low stock notice — shown but ordering still allowed */}
+        {product.stock === 0 && (
+          <p className="text-xs text-amber-600 dark:text-amber-400 mt-2">
+            Limited stock — delivery may be delayed
+          </p>
+        )}
+
+        <div className="flex items-center justify-between mt-3">
           <span className="font-semibold">R {Number(product.price).toFixed(2)}</span>
           <button
-            onClick={() => addItem(product)}
+            onClick={() => { addItem(product); toast.success(`${product.name} added to cart`) }}
             className="text-sm bg-rose-deep hover:bg-rose-mid text-cream px-4 py-1.5 rounded-lg transition-colors"
           >
             Add to Cart
