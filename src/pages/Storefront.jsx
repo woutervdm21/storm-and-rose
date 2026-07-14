@@ -6,10 +6,12 @@ import Meta from '../components/Meta'
 import { useCollection } from '../context/CollectionContext'
 
 const COLLECTION_META = [
-  { slug: 'ember',  name: 'Ember',  tagline: 'Where warmth meets indulgence',               image: '/images/Ember.jpg',  color: '#C47D3E', rgb: '196,125,62'  },
-  { slug: 'roots',  name: 'Roots',  tagline: 'Rooted in natures beauty',                    image: '/images/Roots.jpg',  color: '#4A7C59', rgb: '74,124,89'   },
-  { slug: 'tides',  name: 'Tides',  tagline: 'Flowing serenity, coastal tranquility',       image: '/images/Tides.jpg',  color: '#2E6B9E', rgb: '46,107,158'  },
-  { slug: 'zephyr', name: 'Zephyr', tagline: 'Lightness, elegance and uplifting fragrance', image: '/images/Zephyr.jpg', color: '#B8960C', rgb: '184,150,12'  },
+  // banner: landscape strip used in the accordion (update as new banners arrive)
+  // image:  portrait poster used elsewhere
+  { slug: 'ember',  name: 'Ember',  tagline: 'Where warmth meets indulgence',               banner: '/images/Ember-Banner.jpg', image: '/images/Ember.jpg',  color: '#C47D3E', rgb: '196,125,62'  },
+  { slug: 'roots',  name: 'Roots',  tagline: 'Rooted in natures beauty',                    banner: '/images/Roots.jpg',        image: '/images/Roots.jpg',  color: '#4A7C59', rgb: '74,124,89'   },
+  { slug: 'tides',  name: 'Tides',  tagline: 'Flowing serenity, coastal tranquility',       banner: '/images/Tides.jpg',        image: '/images/Tides.jpg',  color: '#2E6B9E', rgb: '46,107,158'  },
+  { slug: 'zephyr', name: 'Zephyr', tagline: 'Lightness, elegance and uplifting fragrance', banner: '/images/Zephyr.jpg',       image: '/images/Zephyr.jpg', color: '#B8960C', rgb: '184,150,12'  },
 ]
 
 // Collapse animation duration in ms — must match the CSS transition
@@ -63,12 +65,13 @@ export default function Storefront() {
       {/* ── Hero ─────────────────────────────────────── */}
       <section
         id="home"
-        className="relative overflow-hidden py-20 md:py-28 px-4 text-center transition-colors duration-500"
-        style={{ backgroundColor: 'var(--col-bg-dark)' }}
+        className="relative overflow-hidden py-20 md:py-28 px-4 text-center
+                   bg-col-bg dark:bg-col-bg-dark transition-colors duration-500"
       >
+        {/* collection-coloured radial glow — subtle in light, vivid in dark */}
         <div
           className="absolute inset-0 pointer-events-none"
-          style={{ background: 'radial-gradient(ellipse at 50% 0%, rgb(var(--col-primary-rgb) / 0.22) 0%, transparent 65%)' }}
+          style={{ background: 'radial-gradient(ellipse at 50% 0%, rgb(var(--col-primary-rgb) / 0.15) 0%, transparent 65%)' }}
         />
         <div className="relative z-10 max-w-xl mx-auto">
           <img
@@ -76,15 +79,17 @@ export default function Storefront() {
             alt="Storm & Rose"
             className="h-20 w-20 object-contain mx-auto mb-6 opacity-90"
           />
-          <h1 className="font-serif text-5xl md:text-6xl text-cream mb-4 leading-tight">
+          <h1 className="font-serif text-5xl md:text-6xl mb-4 leading-tight
+                         text-rose-deep dark:text-cream transition-colors duration-500">
             Storm &amp; Rose
           </h1>
-          <p className="text-gray-400 text-base md:text-lg leading-relaxed mb-8">
+          <p className="text-base md:text-lg leading-relaxed mb-8
+                        text-gray-600 dark:text-gray-400 transition-colors duration-300">
             Luxury Candles &amp; Thoughtful Designs,<br />Handcrafted with Love
           </p>
           <button
             onClick={() => {
-              document.getElementById('collections')
+              document.getElementById('candles')
                 ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
             }}
             className="btn-primary px-8 py-3 text-sm tracking-wide"
@@ -129,7 +134,7 @@ export default function Storefront() {
       </section>
 
       {/* ── Collections Accordion ────────────────────── */}
-      <div id="collections" className="max-w-6xl mx-auto px-4 py-8">
+      <div id="candles" className="max-w-6xl mx-auto px-4 py-8">
 
         {COLLECTION_META.map(col => {
           const isActive    = collection === col.slug
@@ -150,13 +155,12 @@ export default function Storefront() {
                 }}
               >
                 <img
-                  src={col.image}
+                  src={col.banner}
                   alt={col.name}
-                  className="absolute inset-0 w-full h-full object-cover"
+                  className="absolute inset-0 w-full h-full object-cover object-center"
                   style={{
-                    objectPosition: 'center 12%',
-                    filter:         isActive ? 'brightness(1)' : 'brightness(0.45) saturate(0.6)',
-                    transition:     'filter 0.5s ease',
+                    filter:     isActive ? 'brightness(1)' : 'brightness(0.4) saturate(0.5)',
+                    transition: 'filter 0.5s ease',
                   }}
                 />
                 {isActive && (

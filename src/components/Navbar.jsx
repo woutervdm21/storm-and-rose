@@ -47,9 +47,9 @@ export default function Navbar() {
 
         {/* centre nav links */}
         <div className="hidden md:flex items-center gap-6">
-          <Link to="/" className={linkClass}>Home</Link>
-          <button onClick={() => scrollTo('collections')} className={linkClass}>Candles</button>
+          <Link to="/"                                    className={linkClass}>Home</Link>
           <button onClick={() => scrollTo('about')}       className={linkClass}>About Us</button>
+          <button onClick={() => scrollTo('candles')}     className={linkClass}>Candles</button>
         </div>
 
         {/* right actions */}
