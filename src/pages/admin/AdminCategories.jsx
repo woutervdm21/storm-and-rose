@@ -1,4 +1,4 @@
-// Admin categories — manage categories, assign to collections, drag products between them
+// Admin categories — drag products into the 4 collection columns
 import { useEffect, useState } from 'react'
 import { DndContext, DragOverlay, useDroppable, useDraggable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { toast } from 'sonner'
@@ -6,29 +6,13 @@ import { supabase } from '../../lib/supabase'
 
 const UNCATEGORISED = '__uncategorised__'
 
-const COLLECTION_OPTIONS = [
-  { value: '',       label: 'No collection' },
-  { value: 'ember',  label: 'Ember'  },
-  { value: 'roots',  label: 'Roots'  },
-  { value: 'tides',  label: 'Tides'  },
-  { value: 'zephyr', label: 'Zephyr' },
-]
-
-const COLLECTION_COLORS = {
-  ember:  '#C47D3E',
-  roots:  '#4A7C59',
-  tides:  '#2E6B9E',
-  zephyr: '#B8960C',
-}
+const COLLECTION_COLORS = { Ember: '#C47D3E', Roots: '#4A7C59', Tides: '#2E6B9E', Zephyr: '#B8960C' }
 
 export default function AdminCategories() {
-  const [products, setProducts]     = useState([])
-  const [categories, setCategories] = useState([])
-  const [catName, setCatName]       = useState('')
-  const [catLoading, setCatLoading] = useState(false)
+  const [products, setProducts]           = useState([])
+  const [categories, setCategories]       = useState([])
   const [activeProduct, setActiveProduct] = useState(null)
 
-  // require 8px movement before drag starts — prevents accidental drags on click
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }))
 
   useEffect(() => { loadAll() }, [])
@@ -42,7 +26,6 @@ export default function AdminCategories() {
     setCategories(cats ?? [])
   }
 
-  // --- drag handlers ---
   function handleDragStart(event) {
     setActiveProduct(products.find(p => p.id === event.active.id) ?? null)
   }
@@ -60,37 +43,13 @@ export default function AdminCategories() {
 
     // optimistic update
     setProducts(prev => prev.map(p =>
-      p.id === productId ? { ...p, category_id: newCatId, categories: categories.find(c => c.id === newCatId) ?? null } : p
+      p.id === productId
+        ? { ...p, category_id: newCatId, categories: categories.find(c => c.id === newCatId) ?? null }
+        : p
     ))
 
     const { error } = await supabase.from('products').update({ category_id: newCatId }).eq('id', productId)
-    if (error) { toast.error('Failed to update category'); loadAll() }
-  }
-
-  // --- category CRUD ---
-  async function handleAddCategory(e) {
-    e.preventDefault()
-    if (!catName.trim()) return
-    setCatLoading(true)
-    await supabase.from('categories').insert({ name: catName.trim() })
-    toast.success(`Category "${catName}" added`)
-    setCatName('')
-    setCatLoading(false)
-    loadAll()
-  }
-
-  async function handleDeleteCategory(id, name) {
-    if (!confirm(`Delete "${name}"? Products will become uncategorised.`)) return
-    await supabase.from('categories').delete().eq('id', id)
-    toast.success(`"${name}" deleted`)
-    loadAll()
-  }
-
-  // assign a category to a collection
-  async function handleCollectionChange(categoryId, collection) {
-    await supabase.from('categories').update({ collection: collection || null }).eq('id', categoryId)
-    setCategories(prev => prev.map(c => c.id === categoryId ? { ...c, collection: collection || null } : c))
-    toast.success('Collection updated')
+    if (error) { toast.error('Failed to move product'); loadAll() }
   }
 
   const grouped = {
@@ -99,26 +58,15 @@ export default function AdminCategories() {
   }
 
   const columns = [
-    { id: UNCATEGORISED, name: 'Uncategorised', deletable: false, collection: null },
-    ...categories.map(c => ({ id: c.id, name: c.name, deletable: true, collection: c.collection })),
+    { id: UNCATEGORISED, name: 'Uncategorised' },
+    ...categories.map(c => ({ id: c.id, name: c.name })),
   ]
 
   return (
     <main className="max-w-7xl mx-auto px-4 py-12">
-      <h1 className="font-serif text-3xl text-rose-deep dark:text-rose-dust mb-8">Categories</h1>
+      <h1 className="font-serif text-3xl text-rose-deep dark:text-rose-dust mb-2">Collections</h1>
+      <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">Drag products into a collection to assign them.</p>
 
-      {/* add category */}
-      <form onSubmit={handleAddCategory} className="flex gap-3 mb-10">
-        <input
-          value={catName}
-          onChange={e => setCatName(e.target.value)}
-          placeholder="New category name…"
-          className="input-field max-w-xs"
-        />
-        <button type="submit" disabled={catLoading} className="btn-primary">Add Category</button>
-      </form>
-
-      {/* drag-and-drop board */}
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="flex gap-4 overflow-x-auto pb-6">
           {columns.map(col => (
@@ -126,8 +74,6 @@ export default function AdminCategories() {
               key={col.id}
               column={col}
               products={grouped[col.id] ?? []}
-              onDelete={col.deletable ? () => handleDeleteCategory(col.id, col.name) : null}
-              onCollectionChange={col.deletable ? (val) => handleCollectionChange(col.id, val) : null}
             />
           ))}
         </div>
@@ -137,57 +83,27 @@ export default function AdminCategories() {
         </DragOverlay>
       </DndContext>
 
-      <p className="text-xs text-gray-400 mt-4">Drag products between columns to reassign their category.</p>
+      <p className="text-xs text-gray-400 mt-4">Drag products between columns to reassign their collection.</p>
     </main>
   )
 }
 
-// --- droppable category column ---
-function CategoryColumn({ column, products, onDelete, onCollectionChange }) {
+function CategoryColumn({ column, products }) {
   const { setNodeRef, isOver } = useDroppable({ id: column.id })
-  const accentColor = COLLECTION_COLORS[column.collection] ?? null
+  const accentColor = COLLECTION_COLORS[column.name] ?? null
 
   return (
     <div className="flex-shrink-0 w-56">
-      {/* column header */}
-      <div className="mb-2">
-        <div className="flex items-center justify-between mb-1.5">
-          <h2
-            className="font-semibold text-sm truncate"
-            style={accentColor ? { color: accentColor } : {}}
-          >
-            {column.name}
-          </h2>
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-400">{products.length}</span>
-            {onDelete && (
-              <button
-                onClick={onDelete}
-                className="text-gray-400 hover:text-red-400 transition-colors text-sm leading-none"
-                aria-label="Delete category"
-              >
-                ×
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* collection assignment dropdown */}
-        {onCollectionChange && (
-          <select
-            value={column.collection ?? ''}
-            onChange={e => onCollectionChange(e.target.value)}
-            className="w-full text-xs rounded-lg border border-rose-dust/30 bg-cream dark:bg-navy px-2 py-1 text-gray-500 dark:text-gray-400 focus:outline-none focus:border-rose-dust"
-            style={accentColor ? { borderColor: `${accentColor}88`, color: accentColor } : {}}
-          >
-            {COLLECTION_OPTIONS.map(o => (
-              <option key={o.value} value={o.value}>{o.label}</option>
-            ))}
-          </select>
-        )}
+      <div className="flex items-center justify-between mb-3">
+        <h2
+          className="font-semibold text-sm"
+          style={accentColor ? { color: accentColor } : {}}
+        >
+          {column.name}
+        </h2>
+        <span className="text-xs text-gray-400">{products.length}</span>
       </div>
 
-      {/* droppable zone */}
       <div
         ref={setNodeRef}
         className={`min-h-32 rounded-xl border-2 border-dashed p-2 space-y-2 transition-colors ${
@@ -195,6 +111,7 @@ function CategoryColumn({ column, products, onDelete, onCollectionChange }) {
             ? 'border-rose-deep bg-rose-dust/10'
             : 'border-rose-dust/30 bg-rose-dust/5 dark:bg-rose-dust/5'
         }`}
+        style={isOver && accentColor ? { borderColor: accentColor, backgroundColor: `${accentColor}15` } : {}}
       >
         {products.length === 0 && (
           <p className="text-xs text-gray-400 text-center pt-6">Drop here</p>
@@ -207,13 +124,10 @@ function CategoryColumn({ column, products, onDelete, onCollectionChange }) {
   )
 }
 
-// --- draggable product card ---
 function ProductCard({ product, overlay = false }) {
   const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({ id: product.id })
 
-  const style = transform
-    ? { transform: `translate(${transform.x}px, ${transform.y}px)` }
-    : undefined
+  const style = transform ? { transform: `translate(${transform.x}px, ${transform.y}px)` } : undefined
 
   return (
     <div

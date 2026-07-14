@@ -4,8 +4,6 @@ import { toast } from 'sonner'
 import { supabase } from '../../lib/supabase'
 
 const EMPTY_FORM = { name: '', description: '', price: '', stock: '', category_id: '' }
-
-const COLLECTION_LABELS = { ember: 'Ember', roots: 'Roots', tides: 'Tides', zephyr: 'Zephyr' }
 const BUCKET = 'product-images'
 
 export default function AdminProducts() {
@@ -121,27 +119,12 @@ export default function AdminProducts() {
         <input name="price"       placeholder="Price (R)"     required type="number" step="0.01" value={form.price} onChange={handleChange} className="input-field" />
         <input name="stock"       placeholder="Stock qty"     required type="number" value={form.stock}      onChange={handleChange} className="input-field" />
 
-        {/* category selector — grouped by collection */}
+        {/* collection selector */}
         <select name="category_id" value={form.category_id} onChange={handleChange} className="input-field">
-          <option value="">No category</option>
-          {/* categories assigned to a collection, grouped */}
-          {Object.entries(COLLECTION_LABELS).map(([colId, colLabel]) => {
-            const cats = categories.filter(c => c.collection === colId)
-            if (!cats.length) return null
-            return (
-              <optgroup key={colId} label={`${colLabel} Collection`}>
-                {cats.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
-              </optgroup>
-            )
-          })}
-          {/* uncollected categories */}
-          {categories.filter(c => !c.collection).length > 0 && (
-            <optgroup label="Other">
-              {categories.filter(c => !c.collection).map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-              ))}
-            </optgroup>
-          )}
+          <option value="">No collection</option>
+          {categories.map(cat => (
+            <option key={cat.id} value={cat.id}>{cat.name}</option>
+          ))}
         </select>
 
         <input name="description" placeholder="Description" value={form.description} onChange={handleChange} className="input-field sm:col-span-2" />
