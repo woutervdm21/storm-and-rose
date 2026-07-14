@@ -1,4 +1,4 @@
-// Storefront — collection showcase drives the whole site theme
+// Storefront — accordion collection banners, each expands to show its products
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import ProductCard from '../components/ProductCard'
@@ -17,7 +17,7 @@ export default function Storefront() {
   const [categories, setCategories] = useState([])
   const [loading, setLoading]       = useState(true)
   const { collection, setCollection } = useCollection()
-  const productsRef = useRef(null)
+  const bannerRefs = useRef({})
 
   useEffect(() => {
     async function fetchData() {
@@ -32,186 +32,180 @@ export default function Storefront() {
     fetchData()
   }, [])
 
-  // Pair each collection with its DB category row (matched by name)
-  const collections = COLLECTION_META.map(meta => ({
-    ...meta,
-    categoryId: categories.find(c => c.name.toLowerCase() === meta.slug)?.id ?? null,
-  }))
-
-  const activeMeta       = COLLECTION_META.find(c => c.slug === collection) ?? COLLECTION_META[0]
-  const activeCategoryId = collections.find(c => c.slug === collection)?.categoryId ?? null
+  // match each collection slug to its DB category id
+  const categoryIdFor = (slug) =>
+    categories.find(c => c.name.toLowerCase() === slug)?.id ?? null
 
   function selectCollection(slug) {
     setCollection(slug)
-    setTimeout(() => productsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80)
+    // scroll so the clicked banner sits just under the navbar
+    setTimeout(() => {
+      bannerRefs.current[slug]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 60)
   }
 
-  const visible = activeCategoryId
-    ? products.filter(p => p.category_id === activeCategoryId)
-    : products
+  const activeMeta = COLLECTION_META.find(c => c.slug === collection) ?? COLLECTION_META[0]
 
   return (
     <main>
       <Meta />
 
-      {/* ── Hero ─────────────────────────────────────── */}
-      <section
-        className="relative overflow-hidden py-16 px-4 text-center transition-colors duration-500"
+      {/* minimal page intro */}
+      <div
+        className="py-8 px-4 text-center transition-colors duration-500"
         style={{ backgroundColor: 'var(--col-bg-dark)' }}
       >
-        {/* collection-coloured radial glow */}
-        <div
-          className="absolute inset-0 pointer-events-none transition-opacity duration-500"
-          style={{
-            background: `radial-gradient(ellipse at 50% 0%, rgba(${activeMeta.rgb}, 0.18) 0%, transparent 65%)`,
-          }}
-        />
-        <div className="relative z-10">
-          <p className="text-xs uppercase tracking-[0.35em] mb-3 transition-colors duration-500"
-             style={{ color: `rgba(${activeMeta.rgb}, 0.7)` }}>
-            Storm &amp; Rose
-          </p>
-          <h1 className="font-serif text-4xl md:text-5xl text-cream mb-2">Our Collections</h1>
-          <p className="text-gray-400 max-w-xs mx-auto text-sm leading-relaxed">
-            Select a collection below — the whole store transforms.
-          </p>
-        </div>
-      </section>
-
-      {/* ── Collection Cards ─────────────────────────── */}
-      <section
-        className="px-4 pb-16 pt-6 transition-colors duration-500"
-        style={{ backgroundColor: 'var(--col-bg-dark)' }}
-      >
-        {/* "select a collection" nudge — only shown before user has explicitly chosen */}
-        <p className="text-center text-xs uppercase tracking-widest text-gray-500 mb-5">
-          Choose your collection
+        <p className="text-xs uppercase tracking-[0.35em] mb-1"
+           style={{ color: `rgba(${activeMeta.rgb}, 0.6)` }}>
+          Storm &amp; Rose
         </p>
+        <h1 className="font-serif text-3xl md:text-4xl text-cream">Our Collections</h1>
+        <p className="text-gray-500 text-xs mt-2">Click a collection to explore</p>
+      </div>
 
-        <div className="max-w-5xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
-          {collections.map(col => {
-            const isActive = collection === col.slug
-            return (
+      {/* ── Accordion Banners ──────────────────────── */}
+      <div className="w-full" style={{ backgroundColor: 'var(--col-bg-dark)' }}>
+        {COLLECTION_META.map(col => {
+          const isActive   = collection === col.slug
+          const catId      = categoryIdFor(col.slug)
+          const colProducts = products.filter(p => p.category_id === catId)
+
+          return (
+            <div key={col.slug} ref={el => bannerRefs.current[col.slug] = el}>
+
+              {/* ── Banner ── */}
               <button
-                key={col.slug}
                 onClick={() => selectCollection(col.slug)}
-                className="relative overflow-hidden rounded-2xl text-left focus:outline-none"
+                className="relative w-full overflow-hidden text-left focus:outline-none block"
                 style={{
-                  transition: 'transform 0.35s ease, box-shadow 0.35s ease, opacity 0.35s ease',
-                  transform:  isActive ? 'scale(1.05)' : 'scale(0.97)',
-                  opacity:    isActive ? 1 : 0.45,
-                  boxShadow:  isActive
-                    ? `0 0 0 3px ${col.color}, 0 0 40px ${col.color}66, 0 16px 40px rgba(0,0,0,0.5)`
-                    : '0 2px 16px rgba(0,0,0,0.5)',
+                  height:     isActive ? '300px' : '80px',
+                  transition: 'height 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
                 }}
               >
-                {/* poster — crop top: cuts contact info at bottom */}
-                <div className="h-64 sm:h-72 md:h-80 overflow-hidden">
-                  <img
-                    src={col.image}
-                    alt={`${col.name} Collection`}
-                    className="w-full h-full object-cover object-top"
-                    style={{
-                      transition: 'transform 0.5s ease, filter 0.35s ease',
-                      transform:  isActive ? 'scale(1.04)' : 'scale(1)',
-                      filter:     isActive ? 'none' : 'grayscale(20%) brightness(0.7)',
-                    }}
-                  />
-                </div>
-
-                {/* gradient overlay — lighter when active so poster shows more */}
-                <div
-                  className="absolute inset-0 transition-opacity duration-350"
+                {/* collection image */}
+                <img
+                  src={col.image}
+                  alt={col.name}
+                  className="absolute inset-0 w-full h-full object-cover"
                   style={{
-                    background: 'linear-gradient(to top, rgba(0,0,0,0.85) 0%, rgba(0,0,0,0.05) 55%, transparent 100%)',
-                    opacity: isActive ? 0.75 : 1,
+                    objectPosition: 'center 15%',
+                    filter:     isActive ? 'brightness(0.85)' : 'brightness(0.5) saturate(0.7)',
+                    transition: 'filter 0.5s ease',
                   }}
                 />
 
-                {/* collection info */}
-                <div className="absolute bottom-0 left-0 right-0 p-4">
-                  <p
-                    className="font-serif text-2xl leading-none transition-colors duration-350"
-                    style={{ color: col.color }}
-                  >
-                    {col.name}
-                  </p>
-                  <p className="text-[11px] text-gray-300 mt-1 leading-snug line-clamp-2">
-                    {col.tagline}
-                  </p>
-                  <div className="mt-2 flex items-center gap-1.5">
+                {/* gradient — stronger left side for text readability */}
+                <div
+                  className="absolute inset-0"
+                  style={{
+                    background: isActive
+                      ? 'linear-gradient(to right, rgba(0,0,0,0.75) 0%, rgba(0,0,0,0.35) 50%, rgba(0,0,0,0.1) 100%)'
+                      : 'linear-gradient(to right, rgba(0,0,0,0.7) 0%, rgba(0,0,0,0.3) 100%)',
+                    transition: 'background 0.5s ease',
+                  }}
+                />
+
+                {/* left accent bar */}
+                <div
+                  className="absolute left-0 top-0 bottom-0 w-1 transition-all duration-500"
+                  style={{
+                    backgroundColor: col.color,
+                    opacity: isActive ? 1 : 0.5,
+                    width:   isActive ? '4px' : '2px',
+                  }}
+                />
+
+                {/* text content */}
+                <div className="absolute inset-0 flex items-center px-8 md:px-12 gap-6">
+                  <div className="flex-1 min-w-0">
+                    <p
+                      className="font-serif leading-none transition-all duration-500"
+                      style={{
+                        color:    col.color,
+                        fontSize: isActive ? '2.5rem' : '1.4rem',
+                      }}
+                    >
+                      {col.name}
+                    </p>
+                    <p
+                      className="text-gray-300 italic mt-2 transition-all duration-500 overflow-hidden"
+                      style={{
+                        fontSize:  '0.85rem',
+                        maxHeight: isActive ? '40px' : '0px',
+                        opacity:   isActive ? 1 : 0,
+                      }}
+                    >
+                      {col.tagline}
+                    </p>
+                    {isActive && (
+                      <p className="text-xs mt-4 uppercase tracking-widest"
+                         style={{ color: `rgba(${col.rgb}, 0.7)` }}>
+                        Hand-poured · Scented · Soy Blend
+                      </p>
+                    )}
+                  </div>
+
+                  {/* right side: product count or chevron */}
+                  <div className="flex-shrink-0 text-right">
                     {isActive ? (
-                      <>
-                        <span className="w-1.5 h-1.5 rounded-full animate-pulse" style={{ backgroundColor: col.color }} />
-                        <span className="text-xs font-medium" style={{ color: col.color }}>Currently viewing</span>
-                      </>
+                      <span
+                        className="text-xs uppercase tracking-widest"
+                        style={{ color: `rgba(${col.rgb}, 0.7)` }}
+                      >
+                        {loading ? '…' : `${colProducts.length} candle${colProducts.length !== 1 ? 's' : ''}`}
+                      </span>
                     ) : (
-                      <span className="text-xs text-white/50">Explore →</span>
+                      <span className="text-gray-500 text-lg">﹀</span>
                     )}
                   </div>
                 </div>
               </button>
-            )
-          })}
-        </div>
-      </section>
 
-      {/* ── Products ─────────────────────────────────── */}
-      <div ref={productsRef} className="scroll-mt-4" />
-      <section className="max-w-6xl mx-auto px-4 py-12">
+              {/* ── Products (only when active) ── */}
+              <div
+                style={{
+                  maxHeight:  isActive ? '9999px' : '0px',
+                  overflow:   'hidden',
+                  transition: isActive
+                    ? 'max-height 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
+                    : 'max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                }}
+              >
+                <div className="bg-col-bg dark:bg-col-bg-dark transition-colors duration-500 px-4 md:px-8 py-10">
+                  <div className="max-w-6xl mx-auto">
+                    {loading && (
+                      <div className="flex justify-center py-12">
+                        <div
+                          className="w-7 h-7 border-2 border-t-transparent rounded-full animate-spin"
+                          style={{ borderColor: `${col.color} transparent ${col.color} ${col.color}` }}
+                        />
+                      </div>
+                    )}
 
-        {/* collection heading */}
-        <div className="mb-10 pb-6 border-b border-rose-dust/20 flex items-end justify-between gap-4 flex-wrap">
-          <div>
-            <p className="text-xs uppercase tracking-widest text-rose-dust/60 mb-1 transition-colors duration-500">
-              Collection
-            </p>
-            <h2
-              className="font-serif text-3xl md:text-4xl transition-colors duration-500"
-              style={{ color: activeMeta.color }}
-            >
-              {activeMeta.name}
-            </h2>
-            <p className="italic text-sm text-gray-500 dark:text-gray-400 mt-1">{activeMeta.tagline}</p>
-          </div>
-          {!loading && (
-            <p className="text-sm text-gray-400 dark:text-gray-500">
-              {visible.length} {visible.length === 1 ? 'candle' : 'candles'}
-            </p>
-          )}
-        </div>
+                    {!loading && colProducts.length === 0 && (
+                      <div className="text-center py-16">
+                        <p className="font-serif text-xl mb-1" style={{ color: col.color }}>Coming Soon</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">
+                          No candles in this collection yet — check back soon.
+                        </p>
+                      </div>
+                    )}
 
-        {/* loading */}
-        {loading && (
-          <div className="flex justify-center py-20">
-            <div
-              className="w-8 h-8 border-2 border-t-transparent rounded-full animate-spin transition-colors duration-500"
-              style={{ borderColor: `${activeMeta.color} transparent ${activeMeta.color} ${activeMeta.color}` }}
-            />
-          </div>
-        )}
+                    {!loading && colProducts.length > 0 && (
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
+                        {colProducts.map(product => (
+                          <ProductCard key={product.id} product={product} />
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
 
-        {/* empty */}
-        {!loading && visible.length === 0 && (
-          <div className="text-center py-24">
-            <p className="font-serif text-2xl mb-2" style={{ color: activeMeta.color }}>
-              Coming Soon
-            </p>
-            <p className="text-gray-500 dark:text-gray-400 text-sm">
-              No candles in the {activeMeta.name} collection yet — check back soon.
-            </p>
-          </div>
-        )}
-
-        {/* grid */}
-        {!loading && visible.length > 0 && (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-            {visible.map(product => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-        )}
-      </section>
+            </div>
+          )
+        })}
+      </div>
     </main>
   )
 }
