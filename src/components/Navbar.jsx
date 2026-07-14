@@ -1,28 +1,48 @@
-// Top navigation — logo, cart, dark/light toggle, collection badge, admin link
-import { Link } from 'react-router-dom'
+// Top navigation — logo, nav links, cart, dark/light toggle, collection badge, admin
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useTheme } from '../context/ThemeContext'
 import { useCollection } from '../context/CollectionContext'
 
-const COLLECTION_LABELS = {
-  ember:  'Ember',
-  roots:  'Roots',
-  tides:  'Tides',
-  zephyr: 'Zephyr',
+const COLLECTION_LABELS = { ember: 'Ember', roots: 'Roots', tides: 'Tides', zephyr: 'Zephyr' }
+
+// Scrolls to a section id on the home page; navigates home first if needed
+function useScrollTo() {
+  const navigate  = useNavigate()
+  const location  = useLocation()
+
+  return function scrollTo(sectionId) {
+    const scroll = () => {
+      const el = document.getElementById(sectionId)
+      if (el) {
+        const top = el.getBoundingClientRect().top + window.pageYOffset - 68
+        window.scrollTo({ top, behavior: 'smooth' })
+      }
+    }
+    if (location.pathname === '/') {
+      scroll()
+    } else {
+      navigate('/')
+      setTimeout(scroll, 300)
+    }
+  }
 }
 
 export default function Navbar() {
-  const { items }                    = useCart()
-  const { dark, toggle }             = useTheme()
-  const { collection }               = useCollection()
-  const cartCount = items.reduce((sum, i) => sum + i.qty, 0)
-  const label = COLLECTION_LABELS[collection] ?? 'Ember'
+  const { items }          = useCart()
+  const { dark, toggle }   = useTheme()
+  const { collection }     = useCollection()
+  const scrollTo           = useScrollTo()
+  const cartCount          = items.reduce((sum, i) => sum + i.qty, 0)
+  const label              = COLLECTION_LABELS[collection] ?? 'Ember'
+
+  const linkClass = 'text-sm text-navy dark:text-cream hover:text-rose-deep dark:hover:text-rose-dust transition-colors duration-300'
 
   return (
     <header className="sticky top-0 z-50 bg-col-surface dark:bg-col-surface-dark transition-colors duration-500 shadow-sm">
       <nav className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
 
-        {/* logo + brand name */}
+        {/* logo */}
         <Link to="/" className="flex items-center gap-2 flex-shrink-0">
           <img src="/images/Logo1.png" alt="Storm & Rose" className="h-12 w-12 object-contain" />
           <span className="font-serif text-lg text-rose-deep tracking-wide hidden sm:block transition-colors duration-500">
@@ -30,13 +50,20 @@ export default function Navbar() {
           </span>
         </Link>
 
-        {/* active collection badge — clearly visible */}
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-rose-dust/30 bg-col-bg dark:bg-col-bg-dark transition-colors duration-500">
+        {/* centre nav links */}
+        <div className="hidden md:flex items-center gap-6">
+          <Link to="/" className={linkClass}>Home</Link>
+          <button onClick={() => scrollTo('collections')} className={linkClass}>Candles</button>
+          <button onClick={() => scrollTo('about')}       className={linkClass}>About Us</button>
+        </div>
+
+        {/* collection badge */}
+        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-rose-dust/30 bg-col-bg dark:bg-col-bg-dark transition-colors duration-500 flex-shrink-0">
           <span
             className="w-2 h-2 rounded-full flex-shrink-0 transition-colors duration-500"
             style={{ backgroundColor: `rgb(var(--col-primary-rgb))` }}
           />
-          <span className="text-xs font-medium text-rose-deep dark:text-rose-dust tracking-wide transition-colors duration-500">
+          <span className="text-xs font-medium text-rose-deep dark:text-rose-dust tracking-wide transition-colors duration-500 hidden sm:inline">
             {label} Collection
           </span>
         </div>
@@ -44,10 +71,7 @@ export default function Navbar() {
         {/* right actions */}
         <div className="flex items-center gap-4">
           {/* cart */}
-          <Link
-            to="/cart"
-            className="relative text-navy dark:text-cream hover:text-rose-deep dark:hover:text-rose-dust transition-colors"
-          >
+          <Link to="/cart" className="relative text-navy dark:text-cream hover:text-rose-deep dark:hover:text-rose-dust transition-colors">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                 d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2 9m12-9l2 9m-6-4a1 1 0 100 2 1 1 0 000-2zm-4 0a1 1 0 100 2 1 1 0 000-2z" />
@@ -60,11 +84,8 @@ export default function Navbar() {
           </Link>
 
           {/* dark/light toggle */}
-          <button
-            onClick={toggle}
-            aria-label="Toggle dark mode"
-            className="text-navy dark:text-cream hover:text-rose-deep dark:hover:text-rose-dust transition-colors"
-          >
+          <button onClick={toggle} aria-label="Toggle dark mode"
+            className="text-navy dark:text-cream hover:text-rose-deep dark:hover:text-rose-dust transition-colors">
             {dark ? (
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
@@ -79,16 +100,13 @@ export default function Navbar() {
           </button>
 
           {/* admin */}
-          <Link
-            to="/admin"
-            className="text-xs text-rose-mid hover:text-rose-deep dark:hover:text-rose-dust transition-colors"
-          >
+          <Link to="/admin" className="text-xs text-rose-mid hover:text-rose-deep dark:hover:text-rose-dust transition-colors">
             Admin
           </Link>
         </div>
       </nav>
 
-      {/* collection accent line — the most visible indicator of which collection is active */}
+      {/* collection accent line */}
       <div
         className="h-0.5 w-full transition-all duration-500"
         style={{

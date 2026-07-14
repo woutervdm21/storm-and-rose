@@ -1,4 +1,4 @@
-// Storefront — accordion collection banners, each expands to show its products
+// Storefront — hero, accordion collection banners, about section
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import ProductCard from '../components/ProductCard'
@@ -11,6 +11,9 @@ const COLLECTION_META = [
   { slug: 'tides',  name: 'Tides',  tagline: 'Flowing serenity, coastal tranquility',       image: '/images/Tides.jpg',  color: '#2E6B9E', rgb: '46,107,158'  },
   { slug: 'zephyr', name: 'Zephyr', tagline: 'Lightness, elegance and uplifting fragrance', image: '/images/Zephyr.jpg', color: '#B8960C', rgb: '184,150,12'  },
 ]
+
+// Collapse animation duration in ms — must match the CSS transition
+const COLLAPSE_DURATION = 500
 
 export default function Storefront() {
   const [products, setProducts]     = useState([])
@@ -32,33 +35,68 @@ export default function Storefront() {
     fetchData()
   }, [])
 
-  // match each collection slug to its DB category id
   const categoryIdFor = (slug) =>
     categories.find(c => c.name.toLowerCase() === slug)?.id ?? null
 
   function selectCollection(slug) {
+    // clicking the active collection collapses it — no scroll needed
     if (collection === slug) {
-      // clicking the active collection collapses it
       setCollection(null)
       return
     }
     setCollection(slug)
-    // scroll to the top of the banner, offset for the sticky navbar (~68px)
+    // Wait for the previous banner to finish collapsing before scrolling,
+    // so getBoundingClientRect sees the final layout position.
     setTimeout(() => {
       const el = bannerRefs.current[slug]
-      if (el) {
-        const top = el.getBoundingClientRect().top + window.pageYOffset - 68
-        window.scrollTo({ top, behavior: 'smooth' })
-      }
-    }, 60)
+      if (!el) return
+      const navbarHeight = 68
+      const top = el.getBoundingClientRect().top + window.pageYOffset - navbarHeight
+      window.scrollTo({ top, behavior: 'smooth' })
+    }, COLLAPSE_DURATION + 20)
   }
 
   return (
     <main>
       <Meta />
 
-      {/* ── Accordion Banners ──────────────────────── */}
-      <div className="max-w-6xl mx-auto px-4 py-6">
+      {/* ── Hero ─────────────────────────────────────── */}
+      <section
+        id="home"
+        className="relative overflow-hidden py-20 md:py-28 px-4 text-center transition-colors duration-500"
+        style={{ backgroundColor: 'var(--col-bg-dark)' }}
+      >
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{ background: 'radial-gradient(ellipse at 50% 0%, rgb(var(--col-primary-rgb) / 0.22) 0%, transparent 65%)' }}
+        />
+        <div className="relative z-10 max-w-xl mx-auto">
+          <img
+            src="/images/Logo1.png"
+            alt="Storm & Rose"
+            className="h-20 w-20 object-contain mx-auto mb-6 opacity-90"
+          />
+          <h1 className="font-serif text-5xl md:text-6xl text-cream mb-4 leading-tight">
+            Storm &amp; Rose
+          </h1>
+          <p className="text-gray-400 text-base md:text-lg leading-relaxed mb-8">
+            Luxury Candles &amp; Thoughtful Designs,<br />Handcrafted with Love
+          </p>
+          <button
+            onClick={() => {
+              document.getElementById('collections')
+                ?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            }}
+            className="btn-primary px-8 py-3 text-sm tracking-wide"
+          >
+            Explore Collections
+          </button>
+        </div>
+      </section>
+
+      {/* ── Collections Accordion ────────────────────── */}
+      <div id="collections" className="max-w-6xl mx-auto px-4 py-8">
+
         {COLLECTION_META.map(col => {
           const isActive    = collection === col.slug
           const catId       = categoryIdFor(col.slug)
@@ -73,29 +111,24 @@ export default function Storefront() {
                 className="relative w-full overflow-hidden focus:outline-none block rounded-xl"
                 style={{
                   height:     isActive ? '300px' : '72px',
-                  transition: 'height 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transition: `height ${COLLAPSE_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1)`,
                   boxShadow:  isActive ? `0 0 0 2px ${col.color}` : 'none',
                 }}
               >
-                {/* collection image — centre on the logo/name area of the poster */}
                 <img
                   src={col.image}
                   alt={col.name}
                   className="absolute inset-0 w-full h-full object-cover"
                   style={{
                     objectPosition: 'center 12%',
-                    filter:     isActive ? 'brightness(1)' : 'brightness(0.45) saturate(0.6)',
-                    transition: 'filter 0.5s ease',
+                    filter:         isActive ? 'brightness(1)' : 'brightness(0.45) saturate(0.6)',
+                    transition:     'filter 0.5s ease',
                   }}
                 />
-
-                {/* subtle bottom fade so it blends into the page bg */}
                 {isActive && (
                   <div className="absolute bottom-0 left-0 right-0 h-12"
                        style={{ background: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.3))' }} />
                 )}
-
-                {/* active accent line along the bottom edge */}
                 <div
                   className="absolute bottom-0 left-0 right-0 transition-all duration-500"
                   style={{
@@ -111,9 +144,7 @@ export default function Storefront() {
                 style={{
                   maxHeight:  isActive ? '9999px' : '0px',
                   overflow:   'hidden',
-                  transition: isActive
-                    ? 'max-height 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
-                    : 'max-height 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transition: `max-height ${isActive ? COLLAPSE_DURATION + 100 : COLLAPSE_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1)`,
                 }}
               >
                 <div className="py-8">
@@ -125,7 +156,6 @@ export default function Storefront() {
                       />
                     </div>
                   )}
-
                   {!loading && colProducts.length === 0 && (
                     <div className="text-center py-12">
                       <p className="font-serif text-xl mb-1" style={{ color: col.color }}>Coming Soon</p>
@@ -134,7 +164,6 @@ export default function Storefront() {
                       </p>
                     </div>
                   )}
-
                   {!loading && colProducts.length > 0 && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                       {colProducts.map(product => (
@@ -149,6 +178,62 @@ export default function Storefront() {
           )
         })}
       </div>
+
+      {/* ── About Us ─────────────────────────────────── */}
+      <section
+        id="about"
+        className="max-w-6xl mx-auto px-4 py-16 md:py-24"
+      >
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+
+          {/* image */}
+          <div className="rounded-2xl overflow-hidden shadow-xl order-2 md:order-1">
+            <img
+              src="/images/Rooibos.png"
+              alt="Storm & Rose candles"
+              className="w-full h-80 md:h-full object-cover"
+            />
+          </div>
+
+          {/* text */}
+          <div className="order-1 md:order-2">
+            <p className="text-xs uppercase tracking-[0.3em] text-rose-dust mb-3 transition-colors duration-500">
+              Our Story
+            </p>
+            <h2 className="font-serif text-4xl text-rose-deep dark:text-rose-dust mb-6 transition-colors duration-500">
+              About Storm &amp; Rose
+            </h2>
+            <div className="space-y-4 text-gray-600 dark:text-gray-300 leading-relaxed">
+              <p>
+                Born from a deep passion for warmth, beauty, and intentional living, Storm &amp; Rose crafts luxury soy blend candles that turn everyday moments into something extraordinary.
+              </p>
+              <p>
+                Every candle is hand-poured with care using premium fragrance oils and natural soy wax — designed not just to fill a room with scent, but to tell a story. Our four collections — Ember, Roots, Tides, and Zephyr — each capture a different mood, a different world.
+              </p>
+              <p>
+                We are a Storm of Faith venture, based in Mpumalanga, South Africa. Small batch. Handcrafted. Made with love.
+              </p>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-rose-dust/20 flex flex-col gap-2">
+              <p className="text-sm font-semibold text-rose-deep dark:text-rose-dust transition-colors duration-500">Get in touch</p>
+              <a href="mailto:Stormyvisions@yahoo.com" className="text-sm text-gray-500 hover:text-rose-dust transition-colors">
+                Stormyvisions@yahoo.com
+              </a>
+              <div className="flex gap-6">
+                <a href="tel:0796499728" className="text-sm text-gray-500 hover:text-rose-dust transition-colors">
+                  Candice · 079 649 9728
+                </a>
+                <a href="tel:0723264837" className="text-sm text-gray-500 hover:text-rose-dust transition-colors">
+                  Carmel · 072 326 4837
+                </a>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
     </main>
   )
 }
