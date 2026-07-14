@@ -94,6 +94,40 @@ export default function Storefront() {
         </div>
       </section>
 
+      {/* ── About Us ─────────────────────────────────── */}
+      <section id="about" className="max-w-6xl mx-auto px-4 py-16 md:py-24">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+          <div className="rounded-2xl overflow-hidden shadow-xl order-2 md:order-1">
+            <img src="/images/Rooibos.png" alt="Storm & Rose candles" className="w-full h-80 md:h-full object-cover" />
+          </div>
+          <div className="order-1 md:order-2">
+            <p className="text-xs uppercase tracking-[0.3em] text-rose-dust mb-3 transition-colors duration-500">Our Story</p>
+            <h2 className="font-serif text-4xl text-rose-deep dark:text-rose-dust mb-6 transition-colors duration-500">
+              About Storm &amp; Rose
+            </h2>
+            <div className="space-y-4 text-gray-600 dark:text-gray-300 leading-relaxed">
+              <p>
+                Born from a deep passion for warmth, beauty, and intentional living, Storm &amp; Rose crafts luxury soy blend candles that turn everyday moments into something extraordinary.
+              </p>
+              <p>
+                Every candle is hand-poured with care using premium fragrance oils and natural soy wax — designed not just to fill a room with scent, but to tell a story. Our four collections — Ember, Roots, Tides, and Zephyr — each capture a different mood, a different world.
+              </p>
+              <p>
+                We are a Storm of Faith venture, based in Mpumalanga, South Africa. Small batch. Handcrafted. Made with love.
+              </p>
+            </div>
+            <div className="mt-8 pt-6 border-t border-rose-dust/20 flex flex-col gap-2">
+              <p className="text-sm font-semibold text-rose-deep dark:text-rose-dust transition-colors duration-500">Get in touch</p>
+              <a href="mailto:Stormyvisions@yahoo.com" className="text-sm text-gray-500 hover:text-rose-dust transition-colors">Stormyvisions@yahoo.com</a>
+              <div className="flex gap-6">
+                <a href="tel:0796499728" className="text-sm text-gray-500 hover:text-rose-dust transition-colors">Candice · 079 649 9728</a>
+                <a href="tel:0723264837" className="text-sm text-gray-500 hover:text-rose-dust transition-colors">Carmel · 072 326 4837</a>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Collections Accordion ────────────────────── */}
       <div id="collections" className="max-w-6xl mx-auto px-4 py-8">
 
@@ -178,61 +212,6 @@ export default function Storefront() {
           )
         })}
       </div>
-
-      {/* ── About Us ─────────────────────────────────── */}
-      <section
-        id="about"
-        className="max-w-6xl mx-auto px-4 py-16 md:py-24"
-      >
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
-
-          {/* image */}
-          <div className="rounded-2xl overflow-hidden shadow-xl order-2 md:order-1">
-            <img
-              src="/images/Rooibos.png"
-              alt="Storm & Rose candles"
-              className="w-full h-80 md:h-full object-cover"
-            />
-          </div>
-
-          {/* text */}
-          <div className="order-1 md:order-2">
-            <p className="text-xs uppercase tracking-[0.3em] text-rose-dust mb-3 transition-colors duration-500">
-              Our Story
-            </p>
-            <h2 className="font-serif text-4xl text-rose-deep dark:text-rose-dust mb-6 transition-colors duration-500">
-              About Storm &amp; Rose
-            </h2>
-            <div className="space-y-4 text-gray-600 dark:text-gray-300 leading-relaxed">
-              <p>
-                Born from a deep passion for warmth, beauty, and intentional living, Storm &amp; Rose crafts luxury soy blend candles that turn everyday moments into something extraordinary.
-              </p>
-              <p>
-                Every candle is hand-poured with care using premium fragrance oils and natural soy wax — designed not just to fill a room with scent, but to tell a story. Our four collections — Ember, Roots, Tides, and Zephyr — each capture a different mood, a different world.
-              </p>
-              <p>
-                We are a Storm of Faith venture, based in Mpumalanga, South Africa. Small batch. Handcrafted. Made with love.
-              </p>
-            </div>
-
-            <div className="mt-8 pt-6 border-t border-rose-dust/20 flex flex-col gap-2">
-              <p className="text-sm font-semibold text-rose-deep dark:text-rose-dust transition-colors duration-500">Get in touch</p>
-              <a href="mailto:Stormyvisions@yahoo.com" className="text-sm text-gray-500 hover:text-rose-dust transition-colors">
-                Stormyvisions@yahoo.com
-              </a>
-              <div className="flex gap-6">
-                <a href="tel:0796499728" className="text-sm text-gray-500 hover:text-rose-dust transition-colors">
-                  Candice · 079 649 9728
-                </a>
-                <a href="tel:0723264837" className="text-sm text-gray-500 hover:text-rose-dust transition-colors">
-                  Carmel · 072 326 4837
-                </a>
-              </div>
-            </div>
-          </div>
-
-        </div>
-      </section>
 
     </main>
   )

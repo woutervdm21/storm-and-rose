@@ -2,9 +2,6 @@
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useTheme } from '../context/ThemeContext'
-import { useCollection } from '../context/CollectionContext'
-
-const COLLECTION_LABELS = { ember: 'Ember', roots: 'Roots', tides: 'Tides', zephyr: 'Zephyr' }
 
 // Scrolls to a section id on the home page; navigates home first if needed
 function useScrollTo() {
@@ -31,10 +28,8 @@ function useScrollTo() {
 export default function Navbar() {
   const { items }          = useCart()
   const { dark, toggle }   = useTheme()
-  const { collection }     = useCollection()
-  const scrollTo           = useScrollTo()
-  const cartCount          = items.reduce((sum, i) => sum + i.qty, 0)
-  const label              = COLLECTION_LABELS[collection] ?? 'Ember'
+  const scrollTo  = useScrollTo()
+  const cartCount = items.reduce((sum, i) => sum + i.qty, 0)
 
   const linkClass = 'text-sm text-navy dark:text-cream hover:text-rose-deep dark:hover:text-rose-dust transition-colors duration-300'
 
@@ -55,17 +50,6 @@ export default function Navbar() {
           <Link to="/" className={linkClass}>Home</Link>
           <button onClick={() => scrollTo('collections')} className={linkClass}>Candles</button>
           <button onClick={() => scrollTo('about')}       className={linkClass}>About Us</button>
-        </div>
-
-        {/* collection badge */}
-        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full border border-rose-dust/30 bg-col-bg dark:bg-col-bg-dark transition-colors duration-500 flex-shrink-0">
-          <span
-            className="w-2 h-2 rounded-full flex-shrink-0 transition-colors duration-500"
-            style={{ backgroundColor: `rgb(var(--col-primary-rgb))` }}
-          />
-          <span className="text-xs font-medium text-rose-deep dark:text-rose-dust tracking-wide transition-colors duration-500 hidden sm:inline">
-            {label} Collection
-          </span>
         </div>
 
         {/* right actions */}
