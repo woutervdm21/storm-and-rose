@@ -2,34 +2,103 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer components {
-  /* reusable form input style */
-  .input-field {
-    @apply w-full border border-rose-dust/50 rounded-lg px-4 py-2 bg-cream dark:bg-navy focus:outline-none focus:border-rose-deep;
-  }
+/* ─────────────────────────────────────────────
+   COLLECTION THEME VARIABLES
+   Each data-collection value rewrites the CSS
+   custom properties that drive the whole site.
+   ───────────────────────────────────────────── */
 
-  /* primary action button */
-  .btn-primary {
-    @apply bg-rose-deep hover:bg-rose-mid disabled:opacity-50 text-cream font-semibold py-2 px-5 rounded-lg transition-colors;
-  }
-
-  /* secondary / cancel button */
-  .btn-secondary {
-    @apply border border-rose-dust text-rose-deep dark:text-rose-dust hover:bg-rose-dust/10 font-semibold py-2 px-5 rounded-lg transition-colors;
-  }
+/* EMBER — warm copper & fire (default) */
+:root,
+[data-collection="ember"] {
+  --col-primary-rgb: 196, 125, 62;   /* #C47D3E copper        */
+  --col-deep-rgb:    139, 69,  19;   /* #8B4513 saddle brown  */
+  --col-mid-rgb:     168, 95,  40;   /* #A85F28 mid copper    */
+  --col-bg:          #FDF6EE;        /* warm ivory            */
+  --col-surface:     #F5EDE0;        /* parchment             */
+  --col-bg-dark:     #120A04;        /* charcoal warmth       */
+  --col-surface-dark:#1E1008;        /* dark ember            */
 }
 
+/* ROOTS — sage & forest */
+[data-collection="roots"] {
+  --col-primary-rgb: 74,  124, 89;   /* #4A7C59 sage forest   */
+  --col-deep-rgb:    45,  90,  61;   /* #2D5A3D deep forest   */
+  --col-mid-rgb:     60,  107, 74;   /* #3C6B4A mid green     */
+  --col-bg:          #F0F7F2;        /* pale sage             */
+  --col-surface:     #E2F0E7;        /* mint mist             */
+  --col-bg-dark:     #071209;        /* forest night          */
+  --col-surface-dark:#0D1E10;        /* dark canopy           */
+}
+
+/* TIDES — ocean blue & coastal */
+[data-collection="tides"] {
+  --col-primary-rgb: 46,  107, 158;  /* #2E6B9E ocean blue    */
+  --col-deep-rgb:    26,  74,  114;  /* #1A4A72 deep ocean    */
+  --col-mid-rgb:     36,  91,  136;  /* #245B88 mid ocean     */
+  --col-bg:          #EFF5FA;        /* pale sky              */
+  --col-surface:     #DFF0F8;        /* soft surf             */
+  --col-bg-dark:     #05101C;        /* ocean depth           */
+  --col-surface-dark:#091726;        /* midnight tide         */
+}
+
+/* ZEPHYR — antique gold & champagne */
+[data-collection="zephyr"] {
+  --col-primary-rgb: 184, 150, 12;   /* #B8960C antique gold  */
+  --col-deep-rgb:    138, 112, 10;   /* #8A700A dark gold     */
+  --col-mid-rgb:     160, 131, 11;   /* #A0830B mid gold      */
+  --col-bg:          #FDFAEE;        /* champagne             */
+  --col-surface:     #F5EFD3;        /* golden parchment      */
+  --col-bg-dark:     #110E05;        /* dark warm black       */
+  --col-surface-dark:#1C1808;        /* deep gold shadow      */
+}
+
+/* ─────────────────────────────────────────────
+   BASE STYLES
+   ───────────────────────────────────────────── */
 @layer base {
-  body {
-    @apply bg-cream text-navy font-sans transition-colors duration-300;
+  html {
+    /* Smooth collection switching */
+    transition: background-color 0.5s ease;
   }
 
-  /* dark mode body */
+  body {
+    @apply font-sans;
+    background-color: var(--col-bg);
+    color: #1A1A2E;
+    transition: background-color 0.5s ease, color 0.3s ease;
+  }
+
   .dark body {
-    @apply bg-navy text-cream;
+    background-color: var(--col-bg-dark);
+    color: #F5F3F1;
   }
 
   h1, h2, h3, h4 {
     @apply font-serif;
+  }
+}
+
+/* ─────────────────────────────────────────────
+   SHARED COMPONENT STYLES
+   ───────────────────────────────────────────── */
+@layer components {
+  .input-field {
+    @apply w-full border border-rose-dust/50 rounded-lg px-4 py-2
+           bg-col-surface dark:bg-col-surface-dark
+           focus:outline-none focus:border-rose-deep
+           transition-colors duration-300;
+  }
+
+  .btn-primary {
+    @apply bg-rose-deep hover:bg-rose-mid disabled:opacity-50
+           text-white font-semibold py-2 px-5 rounded-lg
+           transition-colors duration-300;
+  }
+
+  .btn-secondary {
+    @apply border border-rose-dust text-rose-deep dark:text-rose-dust
+           hover:bg-rose-dust/10 font-semibold py-2 px-5 rounded-lg
+           transition-colors duration-300;
   }
 }

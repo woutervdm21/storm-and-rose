@@ -1,26 +1,39 @@
-// Site footer — brand info and contact details
+// Site footer — brand info, contact, links — collection-themed
 import { Link } from 'react-router-dom'
 
 export default function Footer() {
   return (
-    <footer className="mt-20 border-t-4 border-rose-mid bg-cream text-navy dark:bg-navy dark:text-cream">
+    <footer className="mt-20 bg-col-surface dark:bg-col-surface-dark transition-colors duration-500">
+      {/* top accent line */}
+      <div
+        className="h-0.5 w-full"
+        style={{
+          background: `linear-gradient(to right, transparent, rgb(var(--col-primary-rgb)), rgb(var(--col-deep-rgb)), rgb(var(--col-primary-rgb)), transparent)`,
+        }}
+      />
+
       <div className="max-w-6xl mx-auto px-4 py-12 grid grid-cols-1 sm:grid-cols-3 gap-10">
 
         {/* brand */}
         <div className="flex flex-col gap-3">
           <img src="/images/Logo1.png" alt="Storm & Rose" className="h-16 w-16 object-contain" />
-          <p className="font-serif text-lg text-rose-dust">Storm &amp; Rose</p>
+          <p className="font-serif text-lg text-rose-deep dark:text-rose-dust transition-colors duration-500">Storm &amp; Rose</p>
           <p className="text-sm text-gray-600 dark:text-gray-400 leading-relaxed">
             Luxury Candles &amp; Thoughtful Designs,<br />Handcrafted with Love
           </p>
-          <a href="https://www.stormoffaith.co.za" target="_blank" rel="noopener noreferrer" className="text-xs text-gray-500 hover:text-rose-dust transition-colors">
+          <a
+            href="https://www.stormoffaith.co.za"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-xs text-gray-500 hover:text-rose-dust transition-colors"
+          >
             A Storm of Faith venture
           </a>
         </div>
 
         {/* contact */}
         <div className="flex flex-col gap-3">
-          <h3 className="font-serif text-rose-dust">Contact</h3>
+          <h3 className="font-serif text-rose-deep dark:text-rose-dust transition-colors duration-500">Contact</h3>
           <a href="mailto:Stormyvisions@yahoo.com" className="text-sm text-gray-600 dark:text-gray-400 hover:text-rose-dust transition-colors">
             Stormyvisions@yahoo.com
           </a>
@@ -35,14 +48,14 @@ export default function Footer() {
 
         {/* links */}
         <div className="flex flex-col gap-3">
-          <h3 className="font-serif text-rose-dust">Quick Links</h3>
-          <Link to="/"       className="text-sm text-gray-600 dark:text-gray-400 hover:text-rose-dust transition-colors">Shop</Link>
-          <Link to="/cart"   className="text-sm text-gray-600 dark:text-gray-400 hover:text-rose-dust transition-colors">Cart</Link>
-          <Link to="/admin"  className="text-sm text-gray-600 dark:text-gray-400 hover:text-rose-dust transition-colors">Admin</Link>
+          <h3 className="font-serif text-rose-deep dark:text-rose-dust transition-colors duration-500">Quick Links</h3>
+          <Link to="/"      className="text-sm text-gray-600 dark:text-gray-400 hover:text-rose-dust transition-colors">Shop</Link>
+          <Link to="/cart"  className="text-sm text-gray-600 dark:text-gray-400 hover:text-rose-dust transition-colors">Cart</Link>
+          <Link to="/admin" className="text-sm text-gray-600 dark:text-gray-400 hover:text-rose-dust transition-colors">Admin</Link>
         </div>
       </div>
 
-      <div className="border-t border-rose-dust/20 text-center py-4 text-xs text-gray-500 dark:text-gray-600">
+      <div className="border-t border-rose-dust/20 text-center py-4 text-xs text-gray-500 dark:text-gray-600 transition-colors duration-500">
         © {new Date().getFullYear()} Storm &amp; Rose. All rights reserved.
       </div>
     </footer>

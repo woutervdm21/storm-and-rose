@@ -12,34 +12,32 @@ import AdminLayout from './pages/admin/AdminLayout'
 import AdminProducts from './pages/admin/AdminProducts'
 import AdminOrders from './pages/admin/AdminOrders'
 import AdminAnalytics from './pages/admin/AdminAnalytics'
+import AdminCategories from './pages/admin/AdminCategories'
 import AdminGuard from './components/AdminGuard'
 import NotFound from './pages/NotFound'
 
 export default function App() {
   return (
-    <div className="min-h-screen flex flex-col bg-cream dark:bg-navy text-navy dark:text-cream transition-colors duration-300">
+    <div className="min-h-screen flex flex-col bg-col-bg dark:bg-col-bg-dark text-navy dark:text-cream transition-colors duration-500">
       <Navbar />
 
       <div className="flex-1">
         <Routes>
-          {/* public storefront */}
-          <Route path="/" element={<Storefront />} />
-          <Route path="/products/:id" element={<ProductDetail />} />
-          <Route path="/cart" element={<Cart />} />
-          <Route path="/checkout" element={<Checkout />} />
+          <Route path="/"                   element={<Storefront />} />
+          <Route path="/products/:id"       element={<ProductDetail />} />
+          <Route path="/cart"               element={<Cart />} />
+          <Route path="/checkout"           element={<Checkout />} />
           <Route path="/order-confirmation" element={<OrderConfirmation />} />
 
-          {/* admin login — public */}
           <Route path="/admin" element={<AdminLogin />} />
 
-          {/* admin panel — guarded, shared layout with nav */}
           <Route element={<AdminGuard><AdminLayout /></AdminGuard>}>
-            <Route path="/admin/products" element={<AdminProducts />} />
-            <Route path="/admin/orders" element={<AdminOrders />} />
-            <Route path="/admin/analytics" element={<AdminAnalytics />} />
+            <Route path="/admin/products"   element={<AdminProducts />} />
+            <Route path="/admin/orders"     element={<AdminOrders />} />
+            <Route path="/admin/analytics"  element={<AdminAnalytics />} />
+            <Route path="/admin/categories" element={<AdminCategories />} />
           </Route>
 
-          {/* catch-all 404 */}
           <Route path="*" element={<NotFound />} />
         </Routes>
       </div>

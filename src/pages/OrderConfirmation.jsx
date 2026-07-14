@@ -28,7 +28,10 @@ export default function OrderConfirmation() {
     <main className="max-w-lg mx-auto px-4 py-12">
       <Meta title="Order Confirmed" noIndex />
       <h1 className="font-serif text-3xl text-rose-deep dark:text-rose-dust mb-2">Thank You!</h1>
-      <p className="mb-8">Your order has been placed. Please complete payment via EFT.</p>
+      <p className="mb-3">Your order has been placed. Please complete payment via EFT.</p>
+      <p className="mb-8 text-sm text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-400/10 border border-amber-200 dark:border-amber-400/30 rounded-lg px-4 py-2">
+        ⚠ Please note — shipments will only be processed once payment has reflected in our account.
+      </p>
 
       {/* EFT payment details */}
       <div className="bg-rose-dust/10 border border-rose-dust/30 rounded-xl p-6 space-y-3">

@@ -4,7 +4,7 @@ const ThemeContext = createContext()
 
 export function ThemeProvider({ children }) {
   // read saved preference, default to light
-  const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
+  const [dark, setDark] = useState(() => localStorage.getItem('theme') !== 'light')
 
   // apply or remove the 'dark' class on <html> whenever the value changes
   useEffect(() => {
