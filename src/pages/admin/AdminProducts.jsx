@@ -1,23 +1,37 @@
-// Admin product management — list, create, edit, delete products and upload images
+// Admin product management — categories + product CRUD with image upload
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '../../lib/supabase'
 
-const EMPTY_FORM = { name: '', description: '', price: '', stock: '' }
+const EMPTY_FORM = { name: '', description: '', price: '', stock: '', category_id: '' }
+
+const COLLECTION_LABELS = { ember: 'Ember', roots: 'Roots', tides: 'Tides', zephyr: 'Zephyr' }
 const BUCKET = 'product-images'
 
 export default function AdminProducts() {
-  const [products, setProducts]   = useState([])
-  const [form, setForm]           = useState(EMPTY_FORM)
-  const [editId, setEditId]       = useState(null)
-  const [imageFile, setImageFile] = useState(null)
-  const [loading, setLoading]     = useState(false)
-  const [error, setError]         = useState(null)
+  const [products, setProducts]     = useState([])
+  const [categories, setCategories] = useState([])
+  const [form, setForm]             = useState(EMPTY_FORM)
+  const [editId, setEditId]         = useState(null)
+  const [imageFile, setImageFile]   = useState(null)
+  const [loading, setLoading]       = useState(false)
+  const [error, setError]           = useState(null)
 
-  useEffect(() => { loadProducts() }, [])
+  useEffect(() => {
+    loadCategories()
+    loadProducts()
+  }, [])
+
+  async function loadCategories() {
+    const { data } = await supabase.from('categories').select('*').order('sort_order').order('name')
+    setCategories(data ?? [])
+  }
 
   async function loadProducts() {
-    const { data } = await supabase.from('products').select('*').order('created_at', { ascending: false })
+    const { data } = await supabase
+      .from('products')
+      .select('*, categories(name)')
+      .order('created_at', { ascending: false })
     setProducts(data ?? [])
   }
 
@@ -41,7 +55,14 @@ export default function AdminProducts() {
       image_url = urlData.publicUrl
     }
 
-    const payload = { ...form, price: parseFloat(form.price), stock: parseInt(form.stock), image_url }
+    const payload = {
+      name:        form.name,
+      description: form.description,
+      price:       parseFloat(form.price),
+      stock:       parseInt(form.stock),
+      image_url,
+      category_id: form.category_id || null,
+    }
 
     if (editId) {
       await supabase.from('products').update(payload).eq('id', editId)
@@ -60,8 +81,14 @@ export default function AdminProducts() {
 
   function startEdit(product) {
     setEditId(product.id)
-    setForm({ name: product.name, description: product.description, price: product.price, stock: product.stock, image_url: product.image_url })
-    // scroll form into view so the user can see the pre-filled fields
+    setForm({
+      name:        product.name,
+      description: product.description,
+      price:       product.price,
+      stock:       product.stock,
+      image_url:   product.image_url,
+      category_id: product.category_id ?? '',
+    })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -73,32 +100,54 @@ export default function AdminProducts() {
   }
 
   return (
-    <main className="max-w-5xl mx-auto px-4 py-12">
-      <h1 className="font-serif text-3xl text-rose-deep dark:text-rose-dust mb-8">Products</h1>
+    <main className="max-w-5xl mx-auto px-4 py-12 space-y-12">
+      <div className="flex items-center justify-between">
+        <h1 className="font-serif text-3xl text-rose-deep dark:text-rose-dust">Products</h1>
+        <a href="/admin/categories" className="text-sm text-rose-mid hover:underline">Manage categories →</a>
+      </div>
 
-      {/* create / edit form — highlighted in rose when editing */}
+      {/* product form */}
       <form
         onSubmit={handleSubmit}
-        className={`grid grid-cols-1 sm:grid-cols-2 gap-4 mb-12 p-6 rounded-xl border transition-colors ${
-          editId
-            ? 'border-rose-deep bg-rose-dust/10'
-            : 'border-rose-dust/20 bg-transparent'
+        className={`grid grid-cols-1 sm:grid-cols-2 gap-4 p-6 rounded-xl border transition-colors ${
+          editId ? 'border-rose-deep bg-rose-dust/10' : 'border-rose-dust/20 bg-transparent'
         }`}
       >
         {editId && (
-          <p className="sm:col-span-2 text-sm font-semibold text-rose-deep dark:text-rose-dust">
-            Editing product
-          </p>
+          <p className="sm:col-span-2 text-sm font-semibold text-rose-deep dark:text-rose-dust">Editing product</p>
         )}
 
-        <input name="name"        placeholder="Product name"    required value={form.name}        onChange={handleChange} className="input-field" />
-        <input name="price"       placeholder="Price (R)"       required type="number" step="0.01" value={form.price}  onChange={handleChange} className="input-field" />
-        <input name="stock"       placeholder="Stock qty"       required type="number" value={form.stock}       onChange={handleChange} className="input-field" />
-        <input name="description" placeholder="Description"     value={form.description} onChange={handleChange} className="input-field sm:col-span-2" />
+        <input name="name"        placeholder="Product name"  required value={form.name}        onChange={handleChange} className="input-field" />
+        <input name="price"       placeholder="Price (R)"     required type="number" step="0.01" value={form.price} onChange={handleChange} className="input-field" />
+        <input name="stock"       placeholder="Stock qty"     required type="number" value={form.stock}      onChange={handleChange} className="input-field" />
+
+        {/* category selector — grouped by collection */}
+        <select name="category_id" value={form.category_id} onChange={handleChange} className="input-field">
+          <option value="">No category</option>
+          {/* categories assigned to a collection, grouped */}
+          {Object.entries(COLLECTION_LABELS).map(([colId, colLabel]) => {
+            const cats = categories.filter(c => c.collection === colId)
+            if (!cats.length) return null
+            return (
+              <optgroup key={colId} label={`${colLabel} Collection`}>
+                {cats.map(cat => <option key={cat.id} value={cat.id}>{cat.name}</option>)}
+              </optgroup>
+            )
+          })}
+          {/* uncollected categories */}
+          {categories.filter(c => !c.collection).length > 0 && (
+            <optgroup label="Other">
+              {categories.filter(c => !c.collection).map(cat => (
+                <option key={cat.id} value={cat.id}>{cat.name}</option>
+              ))}
+            </optgroup>
+          )}
+        </select>
+
+        <input name="description" placeholder="Description" value={form.description} onChange={handleChange} className="input-field sm:col-span-2" />
 
         <div className="sm:col-span-2 flex items-center gap-4">
           <input type="file" accept="image/*" onChange={e => setImageFile(e.target.files[0])} className="text-sm flex-1" />
-          {/* show current image thumbnail when editing */}
           {editId && form.image_url && !imageFile && (
             <img src={form.image_url} alt="current" className="h-12 w-12 object-cover rounded-lg border border-rose-dust/30" />
           )}
@@ -129,26 +178,27 @@ export default function AdminProducts() {
                 : 'border-rose-dust/20 hover:border-rose-dust/50'
             }`}
           >
-            {/* product image */}
             {p.image_url ? (
               <img src={p.image_url} alt={p.name} className="w-full h-32 object-cover" />
             ) : (
-              <div className="w-full h-32 bg-rose-dust/10 flex items-center justify-center text-xs text-rose-dust/40">
-                No image
-              </div>
+              <div className="w-full h-32 bg-rose-dust/10 flex items-center justify-center text-xs text-rose-dust/40">No image</div>
             )}
 
             <div className="p-3">
               <p className="font-semibold text-sm truncate">{p.name}</p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">R {Number(p.price).toFixed(2)}</p>
 
-              {/* out of stock indicator */}
-              {p.stock === 0 && (
-                <p className="text-xs text-red-400 mt-0.5">Out of stock</p>
+              {/* category badge */}
+              {p.categories?.name && (
+                <span className="inline-block text-xs bg-rose-dust/15 text-rose-deep dark:text-rose-dust px-2 py-0.5 rounded-full mt-1">
+                  {p.categories.name}
+                </span>
               )}
 
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">R {Number(p.price).toFixed(2)}</p>
+              {p.stock === 0 && <p className="text-xs text-red-400 mt-0.5">Out of stock</p>}
+
               <div className="flex gap-2 mt-3">
-                <button onClick={() => startEdit(p)} className="text-xs text-rose-mid hover:underline">Edit</button>
+                <button onClick={() => startEdit(p)}           className="text-xs text-rose-mid hover:underline">Edit</button>
                 <button onClick={() => handleDelete(p.id, p.name)} className="text-xs text-red-400 hover:underline">Delete</button>
               </div>
             </div>
