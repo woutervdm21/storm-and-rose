@@ -37,10 +37,19 @@ export default function Storefront() {
     categories.find(c => c.name.toLowerCase() === slug)?.id ?? null
 
   function selectCollection(slug) {
+    if (collection === slug) {
+      // clicking the active collection collapses it
+      setCollection(null)
+      return
+    }
     setCollection(slug)
-    // scroll so the clicked banner sits just under the navbar
+    // scroll to the top of the banner, offset for the sticky navbar (~68px)
     setTimeout(() => {
-      bannerRefs.current[slug]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      const el = bannerRefs.current[slug]
+      if (el) {
+        const top = el.getBoundingClientRect().top + window.pageYOffset - 68
+        window.scrollTo({ top, behavior: 'smooth' })
+      }
     }, 60)
   }
 
