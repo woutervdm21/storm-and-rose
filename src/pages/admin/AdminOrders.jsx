@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '../../lib/supabase'
+import { fulfillmentInfo, deliveryFeeFor } from '../../lib/fulfillment'
 
 // visual config per status
 const STATUS_CONFIG = {
@@ -105,9 +106,12 @@ export default function AdminOrders() {
 
       <div className="space-y-4">
         {visible.map(order => {
-          const orderTotal = order.order_items?.reduce(
+          // items subtotal + courier fee for delivery orders (free above the threshold)
+          const subtotal = order.order_items?.reduce(
             (sum, item) => sum + item.quantity * item.unit_price, 0
           ) ?? 0
+          const deliveryFee = order.fulfillment === 'delivery' ? deliveryFeeFor(subtotal) : 0
+          const orderTotal = subtotal + deliveryFee
 
           return (
             <div key={order.id} className="border border-rose-dust/30 rounded-xl p-5">
@@ -115,12 +119,21 @@ export default function AdminOrders() {
                 {/* customer + shipping info */}
                 <div>
                   <p className="font-semibold">{order.customer_name}</p>
-                  <p className="text-sm text-gray-500">{order.customer_email}</p>
+                  {order.customer_email && (
+                    <p className="text-sm text-gray-500">{order.customer_email}</p>
+                  )}
                   {order.customer_phone && (
                     <p className="text-sm text-gray-500">{order.customer_phone}</p>
                   )}
                   <p className="text-sm text-gray-400 mt-1">
                     {new Date(order.created_at).toLocaleDateString()} · #{order.id.slice(0, 8).toUpperCase()}
+                  </p>
+                  <p className={`text-xs font-semibold mt-1 inline-block px-2 py-0.5 rounded-full ${
+                    order.fulfillment?.startsWith('collection')
+                      ? 'bg-violet-100 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300'
+                      : 'bg-sky-100 text-sky-700 dark:bg-sky-500/15 dark:text-sky-300'
+                  }`}>
+                    {fulfillmentInfo(order.fulfillment).short}
                   </p>
                   {order.shipping_line1 && (
                     <p className="text-sm text-gray-500 mt-1">
@@ -153,6 +166,12 @@ export default function AdminOrders() {
                     <span>R {(item.quantity * item.unit_price).toFixed(2)}</span>
                   </li>
                 ))}
+                {deliveryFee > 0 && (
+                  <li className="flex justify-between">
+                    <span>Delivery (courier)</span>
+                    <span>R {deliveryFee.toFixed(2)}</span>
+                  </li>
+                )}
                 <li className="flex justify-between font-semibold pt-1 border-t border-rose-dust/10">
                   <span>Total</span>
                   <span>R {orderTotal.toFixed(2)}</span>

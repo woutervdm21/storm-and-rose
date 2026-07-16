@@ -3,15 +3,15 @@ import { createContext, useContext, useEffect, useState } from 'react'
 const CollectionContext = createContext()
 
 export function CollectionProvider({ children }) {
-  // collection = slug string (expanded) or null (all collapsed)
+  // collection = slug string (expanded) or null (all collapsed → default theme)
   const [collection, setCollectionState] = useState(
-    () => localStorage.getItem('collection') ?? 'ember'
+    () => localStorage.getItem('collection') || null
   )
 
   // Apply the saved theme on first paint
   useEffect(() => {
-    const saved = localStorage.getItem('collection') ?? 'ember'
-    document.documentElement.setAttribute('data-collection', saved)
+    const saved = localStorage.getItem('collection')
+    if (saved) document.documentElement.setAttribute('data-collection', saved)
   }, [])
 
   function setCollection(slug) {
@@ -20,8 +20,11 @@ export function CollectionProvider({ children }) {
       // switching to a collection — update theme + persist
       document.documentElement.setAttribute('data-collection', slug)
       localStorage.setItem('collection', slug)
+    } else {
+      // collapsing — return to the Storm & Rose default theme
+      document.documentElement.removeAttribute('data-collection')
+      localStorage.removeItem('collection')
     }
-    // collapsing (null) keeps the last theme on <html> so colours don't reset
   }
 
   return (

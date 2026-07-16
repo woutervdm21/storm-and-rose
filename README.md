@@ -73,6 +73,8 @@ create table orders (
   shipping_city    text,
   shipping_province text,
   shipping_postal  text,
+  fulfillment      text not null default 'delivery'
+                     check (fulfillment in ('collection_emalahleni','collection_middelburg','delivery')),
   created_at       timestamptz default now()
 );
 
@@ -85,6 +87,36 @@ create table order_items (
 );
 
 create index on order_items(order_id);
+
+-- Multiple images per product. products.image_url is kept in sync with the
+-- first image (sort_order 0) and acts as the cover/thumbnail everywhere else.
+create table product_images (
+  id         uuid primary key default gen_random_uuid(),
+  product_id uuid not null references products(id) on delete cascade,
+  url        text not null,
+  sort_order integer not null default 0,
+  created_at timestamptz default now()
+);
+
+create index on product_images(product_id);
+
+alter table product_images enable row level security;
+
+create policy "public read product_images"
+  on product_images for select to public using (true);
+
+create policy "admin insert product_images"
+  on product_images for insert to authenticated with check (true);
+
+create policy "admin update product_images"
+  on product_images for update to authenticated using (true);
+
+create policy "admin delete product_images"
+  on product_images for delete to authenticated using (true);
+
+-- One-time migration of existing single images into the new table
+insert into product_images (product_id, url, sort_order)
+select id, image_url, 0 from products where image_url is not null;
 ```
 
 ### Storage

@@ -10,14 +10,24 @@
      rgb(196, 125, 62 / 0.2)            ← INVALID
    ───────────────────────────────────────────── */
 
-/* EMBER — warm copper & fire (default) */
-:root,
+/* STORM & ROSE — rose gold & plum (default, no collection selected) */
+:root {
+  --col-primary-rgb:    183 110 121;   /* #B76E79 rose gold     */
+  --col-deep-rgb:       109 46  70;    /* #6D2E46 wine plum     */
+  --col-mid-rgb:        146 78  95;    /* #924E5F mid rose      */
+  --col-bg:             #FBF4F5;       /* blush ivory           */
+  --col-surface:        #F4DEE3;       /* rose parchment        */
+  --col-bg-dark:        #130A0E;       /* midnight plum         */
+  --col-surface-dark:   #1F1016;       /* dark rosewood         */
+}
+
+/* EMBER — warm copper & fire */
 [data-collection="ember"] {
   --col-primary-rgb:    196 125 62;    /* #C47D3E copper        */
   --col-deep-rgb:       139 69  19;    /* #8B4513 saddle brown  */
   --col-mid-rgb:        168 95  40;    /* #A85F28 mid copper    */
   --col-bg:             #FDF6EE;       /* warm ivory            */
-  --col-surface:        #F5EDE0;       /* parchment             */
+  --col-surface:        #F6E4CB;       /* toasted parchment     */
   --col-bg-dark:        #120A04;       /* charcoal warmth       */
   --col-surface-dark:   #1E1008;       /* dark ember            */
 }
@@ -28,7 +38,7 @@
   --col-deep-rgb:       45  90  61;    /* #2D5A3D deep forest   */
   --col-mid-rgb:        60  107 74;    /* #3C6B4A mid green     */
   --col-bg:             #F0F7F2;       /* pale sage             */
-  --col-surface:        #E2F0E7;       /* mint mist             */
+  --col-surface:        #D9EDE1;       /* mint mist             */
   --col-bg-dark:        #071209;       /* forest night          */
   --col-surface-dark:   #0D1E10;       /* dark canopy           */
 }
@@ -39,7 +49,7 @@
   --col-deep-rgb:       26  74  114;   /* #1A4A72 deep ocean    */
   --col-mid-rgb:        36  91  136;   /* #245B88 mid ocean     */
   --col-bg:             #EFF5FA;       /* pale sky              */
-  --col-surface:        #DFF0F8;       /* soft surf             */
+  --col-surface:        #D5E8F5;       /* soft surf             */
   --col-bg-dark:        #05101C;       /* ocean depth           */
   --col-surface-dark:   #091726;       /* midnight tide         */
 }
@@ -50,10 +60,164 @@
   --col-deep-rgb:       138 112 10;    /* #8A700A dark gold     */
   --col-mid-rgb:        160 131 11;    /* #A0830B mid gold      */
   --col-bg:             #FDFAEE;       /* champagne             */
-  --col-surface:        #F5EFD3;       /* golden parchment      */
+  --col-surface:        #F2E9C4;       /* golden parchment      */
   --col-bg-dark:        #110E05;       /* dark warm black       */
   --col-surface-dark:   #1C1808;       /* deep gold shadow      */
 }
+
+/* ─────────────────────────────────────────────
+   BANNER ANIMATIONS
+   ───────────────────────────────────────────── */
+
+/* Rotating conic-gradient border on the active collection banner.
+   @property is needed to animate a CSS custom property used inside
+   conic-gradient — supported in all modern browsers since 2023. */
+@property --band-angle {
+  syntax: '<angle>';
+  initial-value: 0deg;
+  inherits: false;
+}
+
+@keyframes spin-band {
+  to { --band-angle: 360deg; }
+}
+
+/* Wrapper that holds the spinning border ring */
+.banner-ring {
+  padding: 3px;
+  border-radius: 14px;   /* slightly larger than the inner 12px radius */
+  background: conic-gradient(
+    from var(--band-angle),
+    transparent           0%,
+    rgb(var(--col-primary-rgb))  12%,
+    rgb(var(--col-deep-rgb))     25%,
+    rgb(var(--col-primary-rgb))  38%,
+    transparent           50%,
+    transparent          100%
+  );
+  animation: spin-band 2.5s linear infinite;
+}
+
+/* Brief brightness flash when a banner is clicked */
+@keyframes click-flash {
+  0%   { filter: brightness(1) scale(1); }
+  20%  { filter: brightness(1.8); transform: scale(0.985); }
+  60%  { filter: brightness(0.9); transform: scale(1.01); }
+  100% { filter: brightness(1);  transform: scale(1); }
+}
+
+.banner-flash {
+  animation: click-flash 0.45s ease-out;
+}
+
+/* Gentle downward nudge on the banner chevron — hints "this opens" */
+@keyframes bounce-soft {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(3px); }
+}
+
+.animate-bounce-soft {
+  animation: bounce-soft 2s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────────────────
+   COLLECTION SPLASH
+   Colour change ripples out from the click point:
+   a filled wave, a deeper core, and a trailing ring.
+   ───────────────────────────────────────────── */
+@keyframes splash-wave {
+  0%   { transform: translate(-50%, -50%) scale(0); opacity: .35; }
+  60%  { opacity: .16; }
+  100% { transform: translate(-50%, -50%) scale(var(--splash-scale)); opacity: 0; }
+}
+
+@keyframes splash-ring {
+  0%   { transform: translate(-50%, -50%) scale(0); opacity: .5; }
+  100% { transform: translate(-50%, -50%) scale(var(--splash-scale)); opacity: 0; }
+}
+
+.splash-wave,
+.splash-core,
+.splash-ring {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  will-change: transform, opacity;
+}
+
+.splash-wave {
+  animation: splash-wave 1s cubic-bezier(0.2, 0.6, 0.3, 1) forwards;
+}
+
+.splash-core {
+  animation: splash-wave 0.75s cubic-bezier(0.3, 0.7, 0.4, 1) forwards;
+}
+
+.splash-ring {
+  border: 2px solid;
+  opacity: 0;
+  animation: splash-ring 1.15s cubic-bezier(0.2, 0.6, 0.3, 1) 0.1s forwards;
+}
+
+/* ─────────────────────────────────────────────
+   SECTION ATMOSPHERE
+   Candlelight glow, film grain, and wax-drip
+   section separators — all collection-aware.
+   ───────────────────────────────────────────── */
+
+/* Irregular flicker, like a candle flame disturbed by air */
+@keyframes candle-flicker {
+  0%, 100% { opacity: .85; transform: scaleX(1)    translateX(0); }
+  18%      { opacity: .65; transform: scaleX(1.05) translateX(-8px); }
+  36%      { opacity: 1;   transform: scaleX(.96)  translateX(5px); }
+  54%      { opacity: .7;  transform: scaleX(1.03) translateX(-4px); }
+  72%      { opacity: .95; transform: scaleX(.98)  translateX(7px); }
+  86%      { opacity: .75; transform: scaleX(1.02) translateX(-2px); }
+}
+
+.candle-glow {
+  animation: candle-flicker 5s ease-in-out infinite;
+}
+
+/* Hero glows — light mode needs hotter alphas to read against pale bgs */
+.hero-glow-top {
+  background: radial-gradient(ellipse at 50% 0%, rgb(var(--col-primary-rgb) / 0.30) 0%, transparent 65%);
+}
+.dark .hero-glow-top {
+  background: radial-gradient(ellipse at 50% 0%, rgb(var(--col-primary-rgb) / 0.15) 0%, transparent 65%);
+}
+
+.hero-glow-bottom {
+  background: radial-gradient(ellipse at 50% 115%, rgb(var(--col-primary-rgb) / 0.38) 0%, transparent 65%);
+}
+.dark .hero-glow-bottom {
+  background: radial-gradient(ellipse at 50% 115%, rgb(var(--col-primary-rgb) / 0.25) 0%, transparent 65%);
+}
+
+/* Photo shadow — collection-tinted in light mode, plain depth in dark */
+.photo-shadow {
+  box-shadow: 0 24px 48px -12px rgb(var(--col-deep-rgb) / 0.35);
+  transition: box-shadow .5s ease;
+}
+.dark .photo-shadow {
+  box-shadow: 0 24px 48px -12px rgb(0 0 0 / 0.6);
+}
+
+/* Fine film grain — barely-there in light mode, richer in dark */
+.grain {
+  pointer-events: none;
+  opacity: .05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+.dark .grain { opacity: .09; }
+
+/* Wax-drip separators pick up the colour of the section above
+   and drip it onto the section below (fill = currentColor). */
+.wax-fill-bg      { color: var(--col-bg);      transition: color .5s ease; }
+.wax-fill-surface { color: var(--col-surface); transition: color .5s ease; }
+.dark .wax-fill-bg      { color: var(--col-bg-dark); }
+.dark .wax-fill-surface { color: var(--col-surface-dark); }
 
 /* ─────────────────────────────────────────────
    BASE STYLES

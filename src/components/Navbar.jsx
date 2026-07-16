@@ -10,6 +10,10 @@ function useScrollTo() {
 
   return function scrollTo(sectionId) {
     const scroll = () => {
+      if (!sectionId) {
+        window.scrollTo({ top: 0, behavior: 'smooth' })
+        return
+      }
       const el = document.getElementById(sectionId)
       if (el) {
         const top = el.getBoundingClientRect().top + window.pageYOffset - 68
@@ -47,9 +51,16 @@ export default function Navbar() {
 
         {/* centre nav links */}
         <div className="hidden md:flex items-center gap-6">
-          <Link to="/"                                    className={linkClass}>Home</Link>
+          <button onClick={() => scrollTo(null)}           className={linkClass}>Home</button>
           <button onClick={() => scrollTo('about')}       className={linkClass}>About Us</button>
           <button onClick={() => scrollTo('candles')}     className={linkClass}>Candles</button>
+          {/* footer renders on every page, so scroll directly — no need to go home first */}
+          <button
+            onClick={() => document.getElementById('contact')?.scrollIntoView({ behavior: 'smooth' })}
+            className={linkClass}
+          >
+            Contact
+          </button>
         </div>
 
         {/* right actions */}

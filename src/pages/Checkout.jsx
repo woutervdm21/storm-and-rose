@@ -5,6 +5,7 @@ import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 import { useCart } from '../context/CartContext'
 import Meta from '../components/Meta'
+import { FULFILLMENT_OPTIONS, fulfillmentInfo, DELIVERY_FEE, FREE_DELIVERY_THRESHOLD, deliveryFeeFor } from '../lib/fulfillment'
 
 const SA_PROVINCES = [
   'Eastern Cape', 'Free State', 'Gauteng', 'KwaZulu-Natal',
@@ -13,6 +14,7 @@ const SA_PROVINCES = [
 
 const EMPTY_FORM = {
   name: '', email: '', phone: '',
+  fulfillment: '',
   shipping_line1: '', shipping_line2: '',
   shipping_city: '', shipping_province: '', shipping_postal: '',
 }
@@ -25,6 +27,11 @@ export default function Checkout() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]         = useState(null)
 
+  // delivery orders pay a courier fee — waived once the cart reaches the free-delivery threshold
+  const freeDelivery = total >= FREE_DELIVERY_THRESHOLD
+  const deliveryFee  = form.fulfillment === 'delivery' ? deliveryFeeFor(total) : 0
+  const grandTotal   = total + deliveryFee
+
   function handleChange(e) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
   }
@@ -34,19 +41,22 @@ export default function Checkout() {
     setSubmitting(true)
     setError(null)
 
-    // create order row with contact + shipping info
+    // create order row with contact + fulfillment info
+    // (shipping address only applies to delivery orders)
+    const isDelivery = form.fulfillment === 'delivery'
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
         customer_name:    form.name,
-        customer_email:   form.email,
+        customer_email:   form.email || null,
         customer_phone:   form.phone,
         status:           'pending_payment',
-        shipping_line1:   form.shipping_line1,
-        shipping_line2:   form.shipping_line2 || null,
-        shipping_city:    form.shipping_city,
-        shipping_province: form.shipping_province,
-        shipping_postal:  form.shipping_postal,
+        fulfillment:      form.fulfillment,
+        shipping_line1:   isDelivery ? form.shipping_line1 : null,
+        shipping_line2:   isDelivery ? (form.shipping_line2 || null) : null,
+        shipping_city:    isDelivery ? form.shipping_city : null,
+        shipping_province: isDelivery ? form.shipping_province : null,
+        shipping_postal:  isDelivery ? form.shipping_postal : null,
       })
       .select()
       .single()
@@ -78,7 +88,7 @@ export default function Checkout() {
     // success — clear cart and go to confirmation
     toast.success('Order placed successfully!')
     clearCart()
-    navigate('/order-confirmation', { state: { order, total } })
+    navigate('/order-confirmation', { state: { order, total: grandTotal } })
   }
 
   if (items.length === 0) {
@@ -98,15 +108,62 @@ export default function Checkout() {
           <Field label="Full Name">
             <input name="name" required value={form.name} onChange={handleChange} className="input-field" />
           </Field>
-          <Field label="Email Address">
-            <input name="email" type="email" required value={form.email} onChange={handleChange} className="input-field" />
+          <Field label="Email Address (optional)">
+            <input name="email" type="email" value={form.email} onChange={handleChange} className="input-field" />
           </Field>
           <Field label="Cellphone Number">
             <input name="phone" type="tel" required value={form.phone} onChange={handleChange} className="input-field" placeholder="072 326 4837" />
           </Field>
         </section>
 
-        {/* delivery address */}
+        {/* fulfillment method */}
+        <section className="flex flex-col gap-4">
+          <h2 className="font-serif text-lg text-rose-deep dark:text-rose-dust">Collection or Delivery</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            {FULFILLMENT_OPTIONS.map(opt => (
+              <label
+                key={opt.value}
+                className={`cursor-pointer rounded-lg border px-4 py-3 text-sm text-center transition-colors
+                            ${form.fulfillment === opt.value
+                              ? 'border-rose-deep bg-rose-dust/15 font-semibold text-rose-deep dark:text-rose-dust'
+                              : 'border-rose-dust/40 hover:bg-rose-dust/10'}`}
+              >
+                <input
+                  type="radio"
+                  name="fulfillment"
+                  value={opt.value}
+                  required
+                  checked={form.fulfillment === opt.value}
+                  onChange={handleChange}
+                  className="sr-only"
+                />
+                {opt.label}
+                {/* show the courier fee (or free-delivery perk) on the Delivery option */}
+                {opt.value === 'delivery' && (
+                  <span className="block text-xs font-normal mt-0.5">
+                    {freeDelivery ? '🚚 FREE' : `+R${DELIVERY_FEE}`}
+                  </span>
+                )}
+              </label>
+            ))}
+          </div>
+
+          {/* collection point address */}
+          {form.fulfillment.startsWith('collection') && (
+            <div className="border border-rose-dust/30 bg-rose-dust/10 rounded-lg px-4 py-3 text-sm">
+              <p className="font-semibold mb-1">Collect your order from:</p>
+              {fulfillmentInfo(form.fulfillment).address.map(line => (
+                <p key={line} className="text-gray-600 dark:text-gray-300">{line}</p>
+              ))}
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
+                We'll contact you when your order is ready for collection.
+              </p>
+            </div>
+          )}
+        </section>
+
+        {/* delivery address — only for delivery orders */}
+        {form.fulfillment === 'delivery' && (
         <section className="flex flex-col gap-4">
           <h2 className="font-serif text-lg text-rose-deep dark:text-rose-dust">Delivery Address</h2>
           <Field label="Street Address">
@@ -130,6 +187,7 @@ export default function Checkout() {
             </select>
           </Field>
         </section>
+        )}
 
         {/* order summary */}
         <div className="border border-rose-dust/30 rounded-lg p-4 text-sm space-y-1">
@@ -139,9 +197,15 @@ export default function Checkout() {
               <span>R {(item.price * item.qty).toFixed(2)}</span>
             </div>
           ))}
+          {form.fulfillment === 'delivery' && (
+            <div className="flex justify-between">
+              <span>Delivery (courier)</span>
+              <span>{freeDelivery ? 'FREE 🎉' : `R ${deliveryFee.toFixed(2)}`}</span>
+            </div>
+          )}
           <div className="flex justify-between font-semibold pt-2 border-t border-rose-dust/20 mt-2">
             <span>Total</span>
-            <span>R {total.toFixed(2)}</span>
+            <span>R {grandTotal.toFixed(2)}</span>
           </div>
         </div>
 

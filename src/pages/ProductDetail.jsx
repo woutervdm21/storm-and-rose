@@ -5,10 +5,12 @@ import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 import { useCart } from '../context/CartContext'
 import Meta from '../components/Meta'
+import ImageSlideshow from '../components/ImageSlideshow'
+import { freeDeliveryMessage } from '../lib/fulfillment'
 
 export default function ProductDetail() {
   const { id } = useParams()
-  const { addItem, items } = useCart()
+  const { addItem, items, total } = useCart()
 
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -19,7 +21,7 @@ export default function ProductDetail() {
     async function fetchProduct() {
       const { data, error } = await supabase
         .from('products')
-        .select('*')
+        .select('*, product_images(id, url, sort_order)')
         .eq('id', id)
         .single()
       if (!error) setProduct(data)
@@ -34,10 +36,18 @@ export default function ProductDetail() {
   // how many of this product are already in the cart
   const inCart = items.find(i => i.id === product.id)?.qty ?? 0
 
+  // all product photos in order, falling back to the legacy single image_url
+  const images = product.product_images?.length
+    ? [...product.product_images].sort((a, b) => a.sort_order - b.sort_order).map(img => img.url)
+    : (product.image_url ? [product.image_url] : [])
+
   function handleAddToCart() {
     for (let i = 0; i < qty; i++) addItem(product)
     setAdded(true)
-    toast.success(`${qty > 1 ? `${qty}× ` : ''}${product.name} added to cart`)
+    // toast includes how far the new cart total is from free delivery
+    toast.success(`${qty > 1 ? `${qty}× ` : ''}${product.name} added to cart`, {
+      description: freeDeliveryMessage(total + qty * Number(product.price)),
+    })
     setTimeout(() => setAdded(false), 2000)
   }
 
@@ -46,7 +56,7 @@ export default function ProductDetail() {
       <Meta
         title={product.name}
         description={product.description}
-        image={product.image_url}
+        image={images[0] ?? product.image_url}
       />
 
       {/* breadcrumb */}
@@ -59,20 +69,12 @@ export default function ProductDetail() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
 
-        {/* product image */}
-        <div className="rounded-2xl overflow-hidden shadow-lg bg-rose-dust/10">
-          {product.image_url ? (
-            <img
-              src={product.image_url}
-              alt={product.name}
-              className="w-full object-cover aspect-square"
-            />
-          ) : (
-            <div className="aspect-square flex items-center justify-center text-rose-dust/40 text-sm">
-              No image
-            </div>
-          )}
-        </div>
+        {/* product images — slideshow when there's more than one */}
+        <ImageSlideshow
+          images={images}
+          alt={product.name}
+          frameClass="rounded-2xl overflow-hidden shadow-lg bg-rose-dust/10"
+        />
 
         {/* product info */}
         <div className="flex flex-col gap-5">

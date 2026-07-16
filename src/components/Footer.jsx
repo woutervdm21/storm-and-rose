@@ -1,9 +1,29 @@
 // Site footer — brand info, contact, links — collection-themed
-import { Link } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 
 export default function Footer() {
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  // Shop → the collections accordion on the home page (navigate home first if needed)
+  function goToCandles() {
+    const scroll = () => {
+      const el = document.getElementById('candles')
+      if (el) {
+        const top = el.getBoundingClientRect().top + window.pageYOffset - 68
+        window.scrollTo({ top, behavior: 'smooth' })
+      }
+    }
+    if (location.pathname === '/') {
+      scroll()
+    } else {
+      navigate('/')
+      setTimeout(scroll, 300)
+    }
+  }
+
   return (
-    <footer className="mt-20 bg-col-surface dark:bg-col-surface-dark transition-colors duration-500">
+    <footer id="contact" className="mt-20 bg-col-surface dark:bg-col-surface-dark transition-colors duration-500">
       {/* top accent line */}
       <div
         className="h-0.5 w-full"
@@ -25,9 +45,15 @@ export default function Footer() {
             href="https://www.stormoffaith.co.za"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-xs text-gray-500 hover:text-rose-dust transition-colors"
+            className="inline-flex items-center gap-1 text-xs text-rose-mid dark:text-rose-dust
+                       underline underline-offset-2 decoration-rose-dust/50
+                       hover:text-rose-deep dark:hover:text-cream hover:decoration-current transition-colors"
           >
             A Storm of Faith venture
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" className="w-3 h-3">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6m4-3h6v6m-11 5L21 3" />
+            </svg>
           </a>
         </div>
 
@@ -38,10 +64,10 @@ export default function Footer() {
             Stormyvisions@yahoo.com
           </a>
           <a href="tel:0723264837" className="text-sm text-gray-600 dark:text-gray-400 hover:text-rose-dust transition-colors">
-            072 326 4837
+            Carmel · 072 326 4837
           </a>
           <a href="tel:0796499728" className="text-sm text-gray-600 dark:text-gray-400 hover:text-rose-dust transition-colors">
-            079 649 9728
+            Candice · 079 649 9728
           </a>
           <p className="text-sm text-gray-600 dark:text-gray-400">Mpumalanga<br />Witbank · Middelburg</p>
         </div>
@@ -49,7 +75,7 @@ export default function Footer() {
         {/* links */}
         <div className="flex flex-col gap-3">
           <h3 className="font-serif text-rose-deep dark:text-rose-dust transition-colors duration-500">Quick Links</h3>
-          <Link to="/"      className="text-sm text-gray-600 dark:text-gray-400 hover:text-rose-dust transition-colors">Shop</Link>
+          <button onClick={goToCandles} className="text-left text-sm text-gray-600 dark:text-gray-400 hover:text-rose-dust transition-colors">Shop</button>
           <Link to="/cart"  className="text-sm text-gray-600 dark:text-gray-400 hover:text-rose-dust transition-colors">Cart</Link>
           <Link to="/admin" className="text-sm text-gray-600 dark:text-gray-400 hover:text-rose-dust transition-colors">Admin</Link>
         </div>

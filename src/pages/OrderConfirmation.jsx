@@ -1,13 +1,15 @@
 // Order confirmation page — shown after successful checkout, displays EFT payment instructions
 import { useLocation, Link } from 'react-router-dom'
 import Meta from '../components/Meta'
+import { fulfillmentInfo } from '../lib/fulfillment'
 
-// EFT banking details — update these before going live
+// EFT banking details
 const EFT = {
-  bank:      'FNB',
-  name:      'Storm & Rose',
-  account:   '62xxxxxxxxx',
-  branch:    '250655',
+  bank:      'Standard Bank',
+  name:      'Storm and Rose',
+  type:      'Savings',
+  account:   '133422836',
+  branch:    '051001',
   reference: 'Order #',
 }
 
@@ -38,23 +40,38 @@ export default function OrderConfirmation() {
         <h2 className="font-serif text-xl mb-4">EFT Payment Details</h2>
         <DetailRow label="Bank"       value={EFT.bank} />
         <DetailRow label="Account Name" value={EFT.name} />
+        <DetailRow label="Account Type" value={EFT.type} />
         <DetailRow label="Account No." value={EFT.account} />
         <DetailRow label="Branch Code" value={EFT.branch} />
         <DetailRow label="Reference"  value={`${EFT.reference}${order.id.slice(0, 8).toUpperCase()}`} />
         <DetailRow label="Amount"     value={`R ${Number(total).toFixed(2)}`} />
       </div>
 
-      {/* delivery address summary */}
+      {/* fulfillment summary — collection point or delivery address */}
       <div className="mt-6 text-sm">
-        <p className="font-semibold mb-1">Delivery to:</p>
-        <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
-          {order.shipping_line1}{order.shipping_line2 ? `, ${order.shipping_line2}` : ''}<br />
-          {order.shipping_city}, {order.shipping_province}, {order.shipping_postal}
-        </p>
+        {order.fulfillment?.startsWith('collection') ? (
+          <>
+            <p className="font-semibold mb-1">Collect your order from:</p>
+            <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+              {fulfillmentInfo(order.fulfillment).address.map(line => <span key={line}>{line}<br /></span>)}
+            </p>
+            <p className="text-gray-500 dark:text-gray-400 mt-1">
+              We'll contact you when your order is ready for collection.
+            </p>
+          </>
+        ) : (
+          <>
+            <p className="font-semibold mb-1">Delivery to:</p>
+            <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+              {order.shipping_line1}{order.shipping_line2 ? `, ${order.shipping_line2}` : ''}<br />
+              {order.shipping_city}, {order.shipping_province}, {order.shipping_postal}
+            </p>
+          </>
+        )}
       </div>
 
       <p className="mt-4 text-sm text-gray-500 dark:text-gray-400">
-        Once payment reflects, we will update your order status and contact you at <strong>{order.customer_email}</strong>.
+        Once payment reflects, we will update your order status and contact you at <strong>{order.customer_email || order.customer_phone}</strong>.
       </p>
 
       <Link to="/" className="inline-block mt-8 text-rose-mid hover:underline">
