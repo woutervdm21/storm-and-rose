@@ -106,7 +106,7 @@ export default function AdminOrders() {
 
       <div className="space-y-4">
         {visible.map(order => {
-          // items subtotal + courier fee for delivery orders (free above the threshold)
+          // items subtotal + the courier fee for the chosen delivery method
           const subtotal = order.order_items?.reduce(
             (sum, item) => sum + item.quantity * item.unit_price, 0
           ) ?? 0
