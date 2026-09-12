@@ -17,6 +17,11 @@ export default function AdminProducts() {
   const [loading, setLoading]       = useState(false)
   const [error, setError]           = useState(null)
 
+  // list filters — the catalogue is long enough that showing all of it is unusable
+  const [search, setSearch]         = useState('')
+  const [filterCat, setFilterCat]   = useState('all')   // 'all' | 'none' | category id
+  const [filterStock, setFilterStock] = useState('all') // 'all' | 'in' | 'out'
+
   useEffect(() => {
     loadCategories()
     loadProducts()
@@ -33,6 +38,23 @@ export default function AdminProducts() {
       .select('*, categories(name), product_images(id, url, sort_order)')
       .order('created_at', { ascending: false })
     setProducts(data ?? [])
+  }
+
+  const visibleProducts = products.filter(p => {
+    if (search && !p.name.toLowerCase().includes(search.trim().toLowerCase())) return false
+    if (filterCat === 'none' && p.category_id) return false
+    if (filterCat !== 'all' && filterCat !== 'none' && p.category_id !== filterCat) return false
+    if (filterStock === 'in'  && p.stock === 0) return false
+    if (filterStock === 'out' && p.stock !== 0) return false
+    return true
+  })
+
+  const isFiltered = search !== '' || filterCat !== 'all' || filterStock !== 'all'
+
+  function clearFilters() {
+    setSearch('')
+    setFilterCat('all')
+    setFilterStock('all')
   }
 
   const sortedImages = (product) =>
@@ -226,9 +248,56 @@ export default function AdminProducts() {
         </div>
       </form>
 
+      {/* list filters */}
+      <div className="flex flex-wrap items-center gap-3 mb-5">
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search by name"
+          aria-label="Search products by name"
+          className="input-field w-auto min-w-[14rem] flex-1 max-w-xs"
+        />
+        <select
+          value={filterCat}
+          onChange={(e) => setFilterCat(e.target.value)}
+          aria-label="Filter by collection"
+          className="input-field w-auto"
+        >
+          <option value="all">All collections</option>
+          <option value="none">Uncategorised</option>
+          {categories.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+        </select>
+        <select
+          value={filterStock}
+          onChange={(e) => setFilterStock(e.target.value)}
+          aria-label="Filter by stock"
+          className="input-field w-auto"
+        >
+          <option value="all">Any stock</option>
+          <option value="in">In stock</option>
+          <option value="out">Out of stock</option>
+        </select>
+
+        <span className="text-xs text-gray-500 dark:text-gray-400">
+          {visibleProducts.length} of {products.length}
+        </span>
+        {isFiltered && (
+          <button onClick={clearFilters} className="text-xs text-rose-mid hover:underline">
+            Clear filters
+          </button>
+        )}
+      </div>
+
       {/* product card grid */}
+      {visibleProducts.length === 0 && (
+        <p className="text-sm text-gray-500 dark:text-gray-400 py-12 text-center">
+          No products match these filters.
+        </p>
+      )}
+
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-        {products.map(p => (
+        {visibleProducts.map(p => (
           <div
             key={p.id}
             className={`rounded-xl border overflow-hidden transition-all ${
