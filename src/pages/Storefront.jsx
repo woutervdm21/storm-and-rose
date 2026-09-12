@@ -31,6 +31,7 @@ export default function Storefront() {
   const [loading, setLoading]       = useState(true)
   const [loadError, setLoadError]   = useState(false)
   const [flashSlug, setFlashSlug]   = useState(null)
+  const [sortBy, setSortBy]         = useState('newest')
   const [splash, setSplash]         = useState(null)
   const { collection, setCollection } = useCollection()
   const { dark } = useTheme()
@@ -81,9 +82,18 @@ export default function Storefront() {
 
   // with nothing selected the grid shows the whole catalogue, so products are
   // never hidden behind a control the visitor has to find first
-  const shownProducts = activeMeta
+  const filtered = activeMeta
     ? products.filter(p => p.category_id === categoryIdFor(activeMeta))
     : products
+
+  const SORTS = {
+    newest:     (a, b) => new Date(b.created_at) - new Date(a.created_at),
+    price_asc:  (a, b) => a.price - b.price,
+    price_desc: (a, b) => b.price - a.price,
+    name:       (a, b) => a.name.localeCompare(b.name),
+  }
+
+  const shownProducts = [...filtered].sort(SORTS[sortBy])
 
   function selectCollection(slug, event) {
     // trigger click flash
@@ -218,9 +228,12 @@ export default function Storefront() {
       <section className="relative bg-col-bg dark:bg-col-bg-dark transition-colors duration-500">
         <div id="candles" className="max-w-6xl mx-auto px-4 py-24 md:py-32">
 
-        {/* section header */}
+        {/* section header — same weight as the About heading */}
         <div className="mb-10">
-          <p className="eyebrow transition-colors duration-500">Our Collections</p>
+          <h2 className="font-serif text-4xl md:text-5xl leading-[1.1]
+                         text-rose-deep dark:text-cream transition-colors duration-500">
+            Our Collections
+          </h2>
         </div>
 
         {/* ── Collection selector ── */}
@@ -293,20 +306,43 @@ export default function Storefront() {
 
         {/* ── Products ── */}
         <div ref={gridRef} id="collection-grid" aria-live="polite">
-          <div className="flex items-baseline justify-between gap-4 mb-8 pb-5 border-b border-rose-dust/20">
+          <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-3 mb-8 pb-5 border-b border-rose-dust/20">
             <h3 className="font-serif text-2xl md:text-3xl text-rose-deep dark:text-cream transition-colors duration-500">
               {activeMeta ? activeMeta.name : 'All candles'}
+              <span className="font-sans text-sm text-gray-500 dark:text-gray-400 ml-3">
+                {shownProducts.length}
+              </span>
             </h3>
-            {/* clearing the filter is its own control, not a second click on the card */}
-            {activeMeta && (
-              <button
-                onClick={(e) => selectCollection(activeMeta.slug, e)}
-                className="font-sans text-[0.65rem] uppercase tracking-[0.18em] text-collection
-                           hover:opacity-70 transition-opacity whitespace-nowrap"
-              >
-                Show all
-              </button>
-            )}
+
+            <div className="flex items-center gap-4">
+              {/* the collection cards do the filtering, so order is what is left */}
+              <label className="flex items-center gap-2">
+                <span className="sr-only">Sort candles by</span>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value)}
+                  className="font-sans text-xs rounded-lg px-2.5 py-1.5 cursor-pointer
+                             border border-rose-dust/40 bg-transparent
+                             focus:outline-none focus:border-rose-deep transition-colors"
+                >
+                  <option value="newest">Newest first</option>
+                  <option value="price_asc">Price: low to high</option>
+                  <option value="price_desc">Price: high to low</option>
+                  <option value="name">Name: A–Z</option>
+                </select>
+              </label>
+
+              {/* clearing the filter is its own control, not a second click on the card */}
+              {activeMeta && (
+                <button
+                  onClick={(e) => selectCollection(activeMeta.slug, e)}
+                  className="font-sans text-[0.65rem] uppercase tracking-[0.18em] text-collection
+                             hover:opacity-70 transition-opacity whitespace-nowrap"
+                >
+                  Show all
+                </button>
+              )}
+            </div>
           </div>
 
           {loading && (
