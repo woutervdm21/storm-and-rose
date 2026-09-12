@@ -6,11 +6,10 @@ import { supabase } from '../lib/supabase'
 import { useCart } from '../context/CartContext'
 import Meta from '../components/Meta'
 import ImageSlideshow from '../components/ImageSlideshow'
-import { freeDeliveryMessage } from '../lib/fulfillment'
 
 export default function ProductDetail() {
   const { id } = useParams()
-  const { addItem, items, total } = useCart()
+  const { addItem, items } = useCart()
 
   const [product, setProduct] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -44,10 +43,7 @@ export default function ProductDetail() {
   function handleAddToCart() {
     for (let i = 0; i < qty; i++) addItem(product)
     setAdded(true)
-    // toast includes how far the new cart total is from free delivery
-    toast.success(`${qty > 1 ? `${qty}× ` : ''}${product.name} added to cart`, {
-      description: freeDeliveryMessage(total + qty * Number(product.price)),
-    })
+    toast.success(`${qty > 1 ? `${qty}× ` : ''}${product.name} added to cart`)
     setTimeout(() => setAdded(false), 2000)
   }
 

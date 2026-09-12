@@ -3,10 +3,9 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { toast } from 'sonner'
 import { useCart } from '../context/CartContext'
-import { freeDeliveryMessage } from '../lib/fulfillment'
 
 export default function ProductCard({ product }) {
-  const { addItem, total } = useCart()
+  const { addItem } = useCart()
   const [imgIndex, setImgIndex] = useState(0)
 
   // all product photos in order, falling back to the legacy single image_url
@@ -24,10 +23,7 @@ export default function ProductCard({ product }) {
   function handleAddToCart(e) {
     e.preventDefault() // don't follow the link if button is inside one
     addItem(product)
-    // toast includes how far the new cart total is from free delivery
-    toast.success(`${product.name} added to cart`, {
-      description: freeDeliveryMessage(total + Number(product.price)),
-    })
+    toast.success(`${product.name} added to cart`)
   }
 
   return (

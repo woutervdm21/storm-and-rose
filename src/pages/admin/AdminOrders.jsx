@@ -110,7 +110,7 @@ export default function AdminOrders() {
           const subtotal = order.order_items?.reduce(
             (sum, item) => sum + item.quantity * item.unit_price, 0
           ) ?? 0
-          const deliveryFee = order.fulfillment === 'delivery' ? deliveryFeeFor(subtotal) : 0
+          const deliveryFee = deliveryFeeFor(order.fulfillment)
           const orderTotal = subtotal + deliveryFee
 
           return (

@@ -5,7 +5,7 @@ import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 import { useCart } from '../context/CartContext'
 import Meta from '../components/Meta'
-import { FULFILLMENT_OPTIONS, fulfillmentInfo, DELIVERY_FEE, FREE_DELIVERY_THRESHOLD, deliveryFeeFor } from '../lib/fulfillment'
+import { COLLECTION_POINTS, DELIVERY_METHODS, fulfillmentInfo, deliveryFeeFor, isDelivery } from '../lib/fulfillment'
 
 const SA_PROVINCES = [
   'Eastern Cape', 'Free State', 'Gauteng', 'KwaZulu-Natal',
@@ -27,13 +27,23 @@ export default function Checkout() {
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]         = useState(null)
 
-  // delivery orders pay a courier fee — waived once the cart reaches the free-delivery threshold
-  const freeDelivery = total >= FREE_DELIVERY_THRESHOLD
-  const deliveryFee  = form.fulfillment === 'delivery' ? deliveryFeeFor(total) : 0
-  const grandTotal   = total + deliveryFee
+  // top-level choice: a collection point, or 'courier' which then asks which
+  // Courier Guy method. Only the method itself is stored on the order.
+  const [topChoice, setTopChoice] = useState('')
+
+  const delivering  = isDelivery(form.fulfillment)
+  const deliveryFee = deliveryFeeFor(form.fulfillment)
+  const grandTotal  = total + deliveryFee
 
   function handleChange(e) {
     setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
+  }
+
+  // choosing a collection point sets the stored value directly; choosing
+  // courier clears it until one of the two methods is picked
+  function handleTopChoice(value) {
+    setTopChoice(value)
+    setForm(prev => ({ ...prev, fulfillment: value === 'courier' ? '' : value }))
   }
 
   async function handleSubmit(e) {
@@ -43,7 +53,7 @@ export default function Checkout() {
 
     // create order row with contact + fulfillment info
     // (shipping address only applies to delivery orders)
-    const isDelivery = form.fulfillment === 'delivery'
+    const toAddress = isDelivery(form.fulfillment)
     const { data: order, error: orderError } = await supabase
       .from('orders')
       .insert({
@@ -52,11 +62,11 @@ export default function Checkout() {
         customer_phone:   form.phone,
         status:           'pending_payment',
         fulfillment:      form.fulfillment,
-        shipping_line1:   isDelivery ? form.shipping_line1 : null,
-        shipping_line2:   isDelivery ? (form.shipping_line2 || null) : null,
-        shipping_city:    isDelivery ? form.shipping_city : null,
-        shipping_province: isDelivery ? form.shipping_province : null,
-        shipping_postal:  isDelivery ? form.shipping_postal : null,
+        shipping_line1:   toAddress ? form.shipping_line1 : null,
+        shipping_line2:   toAddress ? (form.shipping_line2 || null) : null,
+        shipping_city:    toAddress ? form.shipping_city : null,
+        shipping_province: toAddress ? form.shipping_province : null,
+        shipping_postal:  toAddress ? form.shipping_postal : null,
       })
       .select()
       .single()
@@ -120,33 +130,58 @@ export default function Checkout() {
         <section className="flex flex-col gap-4">
           <h2 className="font-serif text-lg text-rose-deep dark:text-rose-dust">Collection or Delivery</h2>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            {FULFILLMENT_OPTIONS.map(opt => (
+            {[...COLLECTION_POINTS, { value: 'courier', label: 'Courier Guy Delivery' }].map(opt => (
               <label
                 key={opt.value}
                 className={`cursor-pointer rounded-lg border px-4 py-3 text-sm text-center transition-colors
-                            ${form.fulfillment === opt.value
+                            ${topChoice === opt.value
                               ? 'border-rose-deep bg-rose-dust/15 font-semibold text-rose-deep dark:text-rose-dust'
                               : 'border-rose-dust/40 hover:bg-rose-dust/10'}`}
               >
                 <input
                   type="radio"
-                  name="fulfillment"
+                  name="top_choice"
                   value={opt.value}
                   required
-                  checked={form.fulfillment === opt.value}
-                  onChange={handleChange}
+                  checked={topChoice === opt.value}
+                  onChange={(e) => handleTopChoice(e.target.value)}
                   className="sr-only"
                 />
                 {opt.label}
-                {/* show the courier fee (or free-delivery perk) on the Delivery option */}
-                {opt.value === 'delivery' && (
-                  <span className="block text-xs font-normal mt-0.5">
-                    {freeDelivery ? '🚚 FREE' : `+R${DELIVERY_FEE}`}
-                  </span>
-                )}
               </label>
             ))}
           </div>
+
+          {/* courier method — only once Courier Guy Delivery is chosen */}
+          {topChoice === 'courier' && (
+            <div className="flex flex-col gap-3">
+              <p className="text-sm font-semibold">Choose a delivery method:</p>
+              {DELIVERY_METHODS.map(method => (
+                <label
+                  key={method.value}
+                  className={`cursor-pointer rounded-lg border px-4 py-3 text-sm flex items-center justify-between gap-4 transition-colors
+                              ${form.fulfillment === method.value
+                                ? 'border-rose-deep bg-rose-dust/15 text-rose-deep dark:text-rose-dust'
+                                : 'border-rose-dust/40 hover:bg-rose-dust/10'}`}
+                >
+                  <span>
+                    <input
+                      type="radio"
+                      name="fulfillment"
+                      value={method.value}
+                      required
+                      checked={form.fulfillment === method.value}
+                      onChange={handleChange}
+                      className="sr-only"
+                    />
+                    <span className="font-semibold block">{method.label}</span>
+                    <span className="text-xs font-normal text-gray-600 dark:text-gray-400">{method.blurb}</span>
+                  </span>
+                  <span className="font-semibold whitespace-nowrap">R {method.fee}</span>
+                </label>
+              ))}
+            </div>
+          )}
 
           {/* collection point address */}
           {form.fulfillment.startsWith('collection') && (
@@ -163,9 +198,14 @@ export default function Checkout() {
         </section>
 
         {/* delivery address — only for delivery orders */}
-        {form.fulfillment === 'delivery' && (
+        {delivering && (
         <section className="flex flex-col gap-4">
           <h2 className="font-serif text-lg text-rose-deep dark:text-rose-dust">Delivery Address</h2>
+          {form.fulfillment === 'delivery_locker' && (
+            <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
+              We use your address to find your nearest Pudo locker, and confirm which one before we ship.
+            </p>
+          )}
           <Field label="Street Address">
             <input name="shipping_line1" required value={form.shipping_line1} onChange={handleChange} className="input-field" placeholder="123 Main Street" />
           </Field>
@@ -197,10 +237,10 @@ export default function Checkout() {
               <span>R {(item.price * item.qty).toFixed(2)}</span>
             </div>
           ))}
-          {form.fulfillment === 'delivery' && (
+          {delivering && (
             <div className="flex justify-between">
-              <span>Delivery (courier)</span>
-              <span>{freeDelivery ? 'FREE 🎉' : `R ${deliveryFee.toFixed(2)}`}</span>
+              <span>{fulfillmentInfo(form.fulfillment).short}</span>
+              <span>R {deliveryFee.toFixed(2)}</span>
             </div>
           )}
           <div className="flex justify-between font-semibold pt-2 border-t border-rose-dust/20 mt-2">

@@ -2,7 +2,6 @@
 import { Link } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import Meta from '../components/Meta'
-import FreeDeliveryBanner from '../components/FreeDeliveryBanner'
 
 export default function Cart() {
   const { items, removeItem, updateQty, total } = useCart()
@@ -23,11 +22,6 @@ export default function Cart() {
     <main className="max-w-2xl mx-auto px-4 py-12">
       <Meta title="Cart" noIndex />
       <h1 className="font-serif text-3xl text-rose-deep dark:text-rose-dust mb-6">Your Cart</h1>
-
-      {/* free-delivery progress nudge */}
-      <div className="mb-6">
-        <FreeDeliveryBanner />
-      </div>
 
       <ul className="divide-y divide-rose-dust/20">
         {items.map(item => (
