@@ -53,23 +53,27 @@ export default function Checkout() {
 
     // create order row with contact + fulfillment info
     // (shipping address only applies to delivery orders)
+    //
+    // The customer is not signed in, and anonymous visitors are allowed to
+    // write an order but not to read one — otherwise anyone could pull up
+    // every customer's details. So we mint the id here and keep our own copy
+    // of the row for the confirmation page, rather than asking for it back.
     const toAddress = isDelivery(form.fulfillment)
-    const { data: order, error: orderError } = await supabase
-      .from('orders')
-      .insert({
-        customer_name:    form.name,
-        customer_email:   form.email || null,
-        customer_phone:   form.phone,
-        status:           'pending_payment',
-        fulfillment:      form.fulfillment,
-        shipping_line1:   toAddress ? form.shipping_line1 : null,
-        shipping_line2:   toAddress ? (form.shipping_line2 || null) : null,
-        shipping_city:    toAddress ? form.shipping_city : null,
-        shipping_province: toAddress ? form.shipping_province : null,
-        shipping_postal:  toAddress ? form.shipping_postal : null,
-      })
-      .select()
-      .single()
+    const order = {
+      id:               crypto.randomUUID(),
+      customer_name:    form.name,
+      customer_email:   form.email || null,
+      customer_phone:   form.phone,
+      status:           'pending_payment',
+      fulfillment:      form.fulfillment,
+      shipping_line1:   toAddress ? form.shipping_line1 : null,
+      shipping_line2:   toAddress ? (form.shipping_line2 || null) : null,
+      shipping_city:    toAddress ? form.shipping_city : null,
+      shipping_province: toAddress ? form.shipping_province : null,
+      shipping_postal:  toAddress ? form.shipping_postal : null,
+    }
+
+    const { error: orderError } = await supabase.from('orders').insert(order)
 
     if (orderError) {
       // the customer gets the friendly line; the real cause goes to the
