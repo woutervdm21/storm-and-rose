@@ -1,0 +1,16 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "storm-and-rose",
+  "compatibility_date": "2026-09-12",
+
+  // Static site only — no Worker script, so there is no "main" entry point.
+  // Cloudflare serves the built Vite output directly.
+  "assets": {
+    "directory": "./dist",
+
+    // React Router owns the routes, so any path that is not a real file must
+    // return index.html with a 200 and be resolved in the browser. Without
+    // this, /cart and /admin/orders 404 on a direct load or refresh.
+    "not_found_handling": "single-page-application"
+  }
+}
