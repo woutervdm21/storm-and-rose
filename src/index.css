@@ -72,42 +72,15 @@
 /* Rotating conic-gradient border on the active collection banner.
    @property is needed to animate a CSS custom property used inside
    conic-gradient — supported in all modern browsers since 2023. */
-@property --band-angle {
-  syntax: '<angle>';
-  initial-value: 0deg;
-  inherits: false;
-}
-
-@keyframes spin-band {
-  to { --band-angle: 360deg; }
-}
-
-/* Wrapper that holds the spinning border ring */
-.banner-ring {
-  padding: 3px;
-  border-radius: 14px;   /* slightly larger than the inner 12px radius */
-  background: conic-gradient(
-    from var(--band-angle),
-    transparent           0%,
-    rgb(var(--col-primary-rgb))  12%,
-    rgb(var(--col-deep-rgb))     25%,
-    rgb(var(--col-primary-rgb))  38%,
-    transparent           50%,
-    transparent          100%
-  );
-  animation: spin-band 2.5s linear infinite;
-}
-
-/* Brief brightness flash when a banner is clicked */
-@keyframes click-flash {
-  0%   { filter: brightness(1) scale(1); }
-  20%  { filter: brightness(1.8); transform: scale(0.985); }
-  60%  { filter: brightness(0.9); transform: scale(1.01); }
-  100% { filter: brightness(1);  transform: scale(1); }
+/* Quick press response when a banner is clicked */
+@keyframes click-press {
+  0%   { transform: scale(1);     }
+  35%  { transform: scale(0.991); }
+  100% { transform: scale(1);     }
 }
 
 .banner-flash {
-  animation: click-flash 0.45s ease-out;
+  animation: click-press 0.32s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Gentle downward nudge on the banner chevron — hints "this opens" */
@@ -122,42 +95,22 @@
 
 /* ─────────────────────────────────────────────
    COLLECTION SPLASH
-   Colour change ripples out from the click point:
-   a filled wave, a deeper core, and a trailing ring.
+   A single soft wave of the incoming collection colour,
+   rippling out from the point that was clicked.
    ───────────────────────────────────────────── */
 @keyframes splash-wave {
-  0%   { transform: translate(-50%, -50%) scale(0); opacity: .35; }
-  60%  { opacity: .16; }
+  0%   { transform: translate(-50%, -50%) scale(0); opacity: .3; }
+  60%  { opacity: .14; }
   100% { transform: translate(-50%, -50%) scale(var(--splash-scale)); opacity: 0; }
 }
 
-@keyframes splash-ring {
-  0%   { transform: translate(-50%, -50%) scale(0); opacity: .5; }
-  100% { transform: translate(-50%, -50%) scale(var(--splash-scale)); opacity: 0; }
-}
-
-.splash-wave,
-.splash-core,
-.splash-ring {
+.splash-wave {
   position: absolute;
   width: 100px;
   height: 100px;
   border-radius: 50%;
   will-change: transform, opacity;
-}
-
-.splash-wave {
-  animation: splash-wave 1s cubic-bezier(0.2, 0.6, 0.3, 1) forwards;
-}
-
-.splash-core {
-  animation: splash-wave 0.75s cubic-bezier(0.3, 0.7, 0.4, 1) forwards;
-}
-
-.splash-ring {
-  border: 2px solid;
-  opacity: 0;
-  animation: splash-ring 1.15s cubic-bezier(0.2, 0.6, 0.3, 1) 0.1s forwards;
+  animation: splash-wave 0.9s cubic-bezier(0.2, 0.6, 0.3, 1) forwards;
 }
 
 /* ─────────────────────────────────────────────
@@ -281,4 +234,24 @@
            dark:border-rose-dust dark:text-rose-dust
            dark:hover:bg-rose-dust/10;
   }
+}
+
+/* ─────────────────────────────────────────────
+   REDUCED MOTION
+   The page leans on ambient movement (candle flicker,
+   chevron nudge, colour splash). Honour the OS setting
+   and hold everything still, keeping layout intact.
+   ───────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* the splash is decorative only — drop it entirely */
+  .splash-wave { display: none; }
 }
