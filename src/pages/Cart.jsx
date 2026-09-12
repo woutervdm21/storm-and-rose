@@ -82,19 +82,19 @@ export default function Cart() {
       </ul>
 
       {/* total + actions */}
-      {/* the total and the buttons sit side by side from small screens up; on a
-          phone they stack, because sharing the row squeezed the amount until it
-          wrapped underneath the "R" */}
+      {/* the total and the two buttons share one row from small screens up. On a
+          phone they each get their own full-width line — side by side, the
+          button padding pushed past the screen and added a sideways scrollbar */}
       <div className="mt-8 pt-6 border-t border-rose-dust/30 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm text-gray-500">Order total</p>
           <p className="text-2xl font-semibold whitespace-nowrap">R {total.toFixed(2)}</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Link to="/" state={{ scrollTo: 'candles' }} className="btn-secondary py-3 px-5 flex-1 text-center whitespace-nowrap sm:flex-none">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Link to="/" state={{ scrollTo: 'candles' }} className="btn-secondary py-3 px-5 text-center">
             Continue Shopping
           </Link>
-          <Link to="/checkout" className="btn-primary py-3 px-8 flex-1 text-center whitespace-nowrap sm:flex-none">
+          <Link to="/checkout" className="btn-primary py-3 px-8 text-center">
             Proceed to Checkout
           </Link>
         </div>
