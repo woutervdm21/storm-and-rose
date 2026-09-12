@@ -41,7 +41,7 @@ export default function AdminOrders() {
   async function loadOrders() {
     const { data } = await supabase
       .from('orders')
-      .select('*, order_items(quantity, unit_price, product_id, products(name))')
+      .select('*, order_items(quantity, unit_price, product_id, variant, products(name))')
       .order('created_at', { ascending: false })
     setOrders(data ?? [])
   }
@@ -162,7 +162,11 @@ export default function AdminOrders() {
               <ul className="text-sm space-y-1 border-t border-rose-dust/20 pt-3">
                 {order.order_items?.map((item, i) => (
                   <li key={i} className="flex justify-between">
-                    <span>{item.products?.name} × {item.quantity}</span>
+                    <span>
+                      {item.products?.name}
+                      {item.variant && <span className="text-rose-mid"> — {item.variant}</span>}
+                      {' '}× {item.quantity}
+                    </span>
                     <span>R {(item.quantity * item.unit_price).toFixed(2)}</span>
                   </li>
                 ))}

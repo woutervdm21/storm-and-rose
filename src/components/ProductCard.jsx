@@ -8,10 +8,16 @@ export default function ProductCard({ product }) {
   const { addItem } = useCart()
   const [imgIndex, setImgIndex] = useState(0)
 
+  const sorted = [...(product.product_images ?? [])].sort((a, b) => a.sort_order - b.sort_order)
+
   // all product photos in order, falling back to the legacy single image_url
-  const images = product.product_images?.length
-    ? [...product.product_images].sort((a, b) => a.sort_order - b.sort_order).map(img => img.url)
+  const images = sorted.length
+    ? sorted.map(img => img.url)
     : (product.image_url ? [product.image_url] : [])
+
+  // a product with labelled photos can't be added blind — the customer has
+  // to pick one, so the card sends them to the product page instead
+  const hasOptions = sorted.some(img => img.label)
 
   // gentle auto-crossfade when the product has more than one photo
   useEffect(() => {
@@ -141,13 +147,22 @@ export default function ProductCard({ product }) {
             </Link>
           </div>
 
-          {/* full-width Add to Cart — always visible, hard to miss */}
-          <button
-            onClick={handleAddToCart}
-            className="btn-primary w-full py-2 text-sm"
-          >
-            Add to Cart
-          </button>
+          {/* full-width call to action — always visible, hard to miss */}
+          {hasOptions ? (
+            <Link
+              to={`/products/${product.id}`}
+              className="btn-primary w-full py-2 text-sm text-center block"
+            >
+              Choose an Option
+            </Link>
+          ) : (
+            <button
+              onClick={handleAddToCart}
+              className="btn-primary w-full py-2 text-sm"
+            >
+              Add to Cart
+            </button>
+          )}
         </div>
       </div>
     </div>

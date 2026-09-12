@@ -84,6 +84,8 @@ export default function Checkout() {
       product_id: item.id,
       quantity:   item.qty,
       unit_price: item.price,
+      // which option the customer picked, when the product offers any
+      variant:    item.variant ?? null,
     }))
 
     const { error: itemsError } = await supabase.from('order_items').insert(orderItems)

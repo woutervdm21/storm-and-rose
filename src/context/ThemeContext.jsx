@@ -3,8 +3,8 @@ import { createContext, useContext, useEffect, useState } from 'react'
 const ThemeContext = createContext()
 
 export function ThemeProvider({ children }) {
-  // read saved preference, default to light
-  const [dark, setDark] = useState(() => localStorage.getItem('theme') !== 'light')
+  // read saved preference; with nothing saved, first-time visitors get light
+  const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark')
 
   // apply or remove the 'dark' class on <html> whenever the value changes
   useEffect(() => {

@@ -35,7 +35,7 @@ export default function AdminProducts() {
   async function loadProducts() {
     const { data } = await supabase
       .from('products')
-      .select('*, categories(name), product_images(id, url, sort_order)')
+      .select('*, categories(name), product_images(id, url, sort_order, label)')
       .order('created_at', { ascending: false })
     setProducts(data ?? [])
   }
@@ -76,6 +76,17 @@ export default function AdminProducts() {
     setExistingImages(list)
     await persistImageOrder(editId, list)
     toast.success('Photo removed')
+    loadProducts()
+  }
+
+  // a photo with a label becomes a selectable option on the product page;
+  // clearing the label turns it back into a plain gallery photo
+  async function saveImageLabel(img, label) {
+    const value = label.trim() || null
+    setExistingImages(prev => prev.map(i => (i.id === img.id ? { ...i, label: value } : i)))
+    const { error: labelError } = await supabase
+      .from('product_images').update({ label: value }).eq('id', img.id)
+    if (labelError) { toast.error('Could not save the option name.'); return }
     loadProducts()
   }
 
@@ -200,25 +211,42 @@ export default function AdminProducts() {
           {editId && existingImages.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {existingImages.map((img, i) => (
-                <div key={img.id} className="relative w-20 h-20 rounded-lg overflow-hidden border border-rose-dust/30 group">
-                  <img src={img.url} alt="" className="w-full h-full object-cover" />
-                  {i === 0 && (
-                    <span className="absolute top-0 left-0 text-[0.55rem] bg-rose-deep text-cream px-1.5 py-0.5 rounded-br-lg">
-                      Cover
-                    </span>
-                  )}
-                  <div className="absolute inset-x-0 bottom-0 flex justify-center gap-1 py-0.5 bg-black/50
-                                  opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button type="button" onClick={() => moveImage(i, -1)} disabled={i === 0}
-                            className="text-cream text-xs px-1 disabled:opacity-30" title="Move left">◀</button>
-                    <button type="button" onClick={() => deleteImage(img)}
-                            className="text-red-300 text-xs px-1" title="Remove">✕</button>
-                    <button type="button" onClick={() => moveImage(i, 1)} disabled={i === existingImages.length - 1}
-                            className="text-cream text-xs px-1 disabled:opacity-30" title="Move right">▶</button>
+                <div key={img.id} className="w-24 space-y-1">
+                  <div className="relative w-24 h-24 rounded-lg overflow-hidden border border-rose-dust/30 group">
+                    <img src={img.url} alt="" className="w-full h-full object-cover" />
+                    {i === 0 && (
+                      <span className="absolute top-0 left-0 text-[0.55rem] bg-rose-deep text-cream px-1.5 py-0.5 rounded-br-lg">
+                        Cover
+                      </span>
+                    )}
+                    <div className="absolute inset-x-0 bottom-0 flex justify-center gap-1 py-0.5 bg-black/50
+                                    opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button type="button" onClick={() => moveImage(i, -1)} disabled={i === 0}
+                              className="text-cream text-xs px-1 disabled:opacity-30" title="Move left">◀</button>
+                      <button type="button" onClick={() => deleteImage(img)}
+                              className="text-red-300 text-xs px-1" title="Remove">✕</button>
+                      <button type="button" onClick={() => moveImage(i, 1)} disabled={i === existingImages.length - 1}
+                              className="text-cream text-xs px-1 disabled:opacity-30" title="Move right">▶</button>
+                    </div>
                   </div>
+                  <input
+                    defaultValue={img.label ?? ''}
+                    onBlur={(e) => saveImageLabel(img, e.target.value)}
+                    placeholder="Option…"
+                    title="Name this photo (e.g. Purple) to make it a choice on the product page. Leave blank for a plain gallery photo."
+                    className="w-full text-[0.7rem] rounded-md px-1.5 py-1 border border-rose-dust/30
+                               bg-transparent placeholder-gray-400 focus:outline-none focus:border-rose-deep"
+                  />
                 </div>
               ))}
             </div>
+          )}
+
+          {editId && existingImages.length > 0 && (
+            <p className="text-xs text-gray-500 dark:text-gray-400">
+              Name a photo (e.g. “Purple”) to make it a choice customers pick on the product page.
+              Leave the names blank and the photos stay a plain gallery.
+            </p>
           )}
 
           <input key={fileKey} type="file" accept="image/*" multiple

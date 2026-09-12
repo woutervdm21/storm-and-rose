@@ -4,7 +4,7 @@ import { useCart } from '../context/CartContext'
 import Meta from '../components/Meta'
 
 export default function Cart() {
-  const { items, removeItem, updateQty, total } = useCart()
+  const { items, removeItem, updateQty, total, lineKey } = useCart()
 
   if (items.length === 0) {
     return (
@@ -24,11 +24,13 @@ export default function Cart() {
       <h1 className="font-serif text-3xl text-rose-deep dark:text-rose-dust mb-6">Your Cart</h1>
 
       <ul className="divide-y divide-rose-dust/20">
-        {items.map(item => (
-          <li key={item.id} className="flex items-center gap-4 py-5">
-            {/* thumbnail */}
-            {item.image_url ? (
-              <img src={item.image_url} alt={item.name} className="w-18 h-18 w-16 h-16 object-cover rounded-xl flex-shrink-0" />
+        {items.map(item => {
+          const key = lineKey(item)
+          return (
+          <li key={key} className="flex items-center gap-4 py-5">
+            {/* thumbnail — the chosen variant's photo when there is one */}
+            {(item.variant_image ?? item.image_url) ? (
+              <img src={item.variant_image ?? item.image_url} alt={item.name} className="w-16 h-16 object-cover rounded-xl flex-shrink-0" />
             ) : (
               <div className="w-16 h-16 rounded-xl bg-rose-dust/10 flex-shrink-0" />
             )}
@@ -36,20 +38,23 @@ export default function Cart() {
             {/* name + price */}
             <div className="flex-1 min-w-0">
               <p className="font-semibold truncate">{item.name}</p>
+              {item.variant && (
+                <p className="text-xs text-gray-500 dark:text-gray-400">{item.variant}</p>
+              )}
               <p className="text-sm text-rose-mid">R {Number(item.price).toFixed(2)} each</p>
             </div>
 
             {/* quantity controls — matching ProductDetail style */}
             <div className="flex items-center border border-rose-dust/40 rounded-lg overflow-hidden">
               <button
-                onClick={() => updateQty(item.id, item.qty - 1)}
+                onClick={() => updateQty(key, item.qty - 1)}
                 className="w-8 h-8 flex items-center justify-center hover:bg-rose-dust/10 transition-colors"
               >
                 −
               </button>
               <span className="w-8 text-center text-sm font-semibold">{item.qty}</span>
               <button
-                onClick={() => updateQty(item.id, item.qty + 1)}
+                onClick={() => updateQty(key, item.qty + 1)}
                 className="w-8 h-8 flex items-center justify-center hover:bg-rose-dust/10 transition-colors"
               >
                 +
@@ -63,7 +68,7 @@ export default function Cart() {
 
             {/* remove */}
             <button
-              onClick={() => removeItem(item.id)}
+              onClick={() => removeItem(key)}
               aria-label="Remove item"
               className="text-gray-400 hover:text-rose-deep dark:hover:text-rose-dust transition-colors ml-1"
             >
@@ -72,7 +77,8 @@ export default function Cart() {
               </svg>
             </button>
           </li>
-        ))}
+          )
+        })}
       </ul>
 
       {/* total + actions */}

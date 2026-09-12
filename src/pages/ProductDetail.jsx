@@ -15,12 +15,13 @@ export default function ProductDetail() {
   const [loading, setLoading] = useState(true)
   const [qty, setQty]         = useState(1)
   const [added, setAdded]     = useState(false)
+  const [variant, setVariant] = useState(null)   // chosen labelled photo, if any
 
   useEffect(() => {
     async function fetchProduct() {
       const { data, error } = await supabase
         .from('products')
-        .select('*, product_images(id, url, sort_order)')
+        .select('*, product_images(id, url, sort_order, label)')
         .eq('id', id)
         .single()
       if (!error) setProduct(data)
@@ -32,18 +33,35 @@ export default function ProductDetail() {
   if (loading) return <p className="p-8 text-center">Loading...</p>
   if (!product) return <p className="p-8 text-center">Product not found.</p>
 
-  // how many of this product are already in the cart
-  const inCart = items.find(i => i.id === product.id)?.qty ?? 0
+  // how many of this product are already in the cart, across all variants
+  const inCart = items.filter(i => i.id === product.id).reduce((n, i) => n + i.qty, 0)
+
+  const sorted = [...(product.product_images ?? [])].sort((a, b) => a.sort_order - b.sort_order)
 
   // all product photos in order, falling back to the legacy single image_url
-  const images = product.product_images?.length
-    ? [...product.product_images].sort((a, b) => a.sort_order - b.sort_order).map(img => img.url)
+  const images = sorted.length
+    ? sorted.map(img => img.url)
     : (product.image_url ? [product.image_url] : [])
 
+  // photos given a label in admin become selectable options; unlabelled
+  // photos stay plain gallery shots and the picker never appears
+  const options = sorted.filter(img => img.label)
+  const chosen  = options.find(o => o.label === variant) ?? null
+
   function handleAddToCart() {
-    for (let i = 0; i < qty; i++) addItem(product)
+    // a product with options must have one picked before it can be added
+    if (options.length > 0 && !chosen) {
+      toast.error('Please choose an option first')
+      return
+    }
+    const line = chosen
+      ? { ...product, variant_image: chosen.url }
+      : product
+    for (let i = 0; i < qty; i++) addItem(line, chosen?.label ?? null)
     setAdded(true)
-    toast.success(`${qty > 1 ? `${qty}× ` : ''}${product.name} added to cart`)
+    toast.success(
+      `${qty > 1 ? `${qty}× ` : ''}${product.name}${chosen ? ` — ${chosen.label}` : ''} added to cart`
+    )
     setTimeout(() => setAdded(false), 2000)
   }
 
@@ -90,6 +108,32 @@ export default function ProductDetail() {
             <p className="text-sm text-emerald-600 dark:text-emerald-400">
               {product.stock} in stock
             </p>
+          )}
+
+          {/* option picker — only for products with labelled photos */}
+          {options.length > 0 && (
+            <div className="flex flex-col gap-2">
+              <span className="text-sm font-semibold">
+                Choose an option{!chosen && <span className="text-rose-mid font-normal"> — required</span>}
+              </span>
+              <div className="flex flex-wrap gap-2">
+                {options.map(opt => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    onClick={() => setVariant(opt.label)}
+                    aria-pressed={opt.label === variant}
+                    className={`flex items-center gap-2 rounded-xl border px-2 py-1.5 pr-3 text-sm transition-colors
+                                ${opt.label === variant
+                                  ? 'border-rose-deep bg-rose-dust/15 font-semibold text-rose-deep dark:text-rose-dust'
+                                  : 'border-rose-dust/40 hover:bg-rose-dust/10'}`}
+                  >
+                    <img src={opt.url} alt="" className="w-9 h-9 rounded-lg object-cover" />
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
           )}
 
           {/* quantity selector */}

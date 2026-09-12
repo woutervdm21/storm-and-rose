@@ -41,7 +41,7 @@ export default function Storefront() {
     async function fetchData() {
       try {
         const [{ data: prods, error: prodErr }, { data: cats, error: catErr }] = await Promise.all([
-          supabase.from('products').select('*, categories(id, name), product_images(url, sort_order)'),
+          supabase.from('products').select('*, categories(id, name), product_images(url, sort_order, label)'),
           supabase.from('categories').select('*').order('sort_order').order('name'),
         ])
         // a failed request must not look like an empty collection

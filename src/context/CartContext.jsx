@@ -17,26 +17,32 @@ export function CartProvider({ children }) {
     localStorage.setItem('cart', JSON.stringify(items))
   }, [items])
 
-  // add a product or increment quantity if already in cart
-  function addItem(product) {
+  // A cart line is a product *and* the variant chosen, so two colours of the
+  // same candle sit on separate lines. Items with no variant key on id alone,
+  // which is also what carts saved before variants existed look like.
+  const lineKey = (item) => (item.variant ? `${item.id}::${item.variant}` : item.id)
+
+  // add a product or increment quantity if that exact line is already in cart
+  function addItem(product, variant = null) {
+    const line = { ...product, variant: variant ?? null }
     setItems(prev => {
-      const existing = prev.find(i => i.id === product.id)
+      const existing = prev.find(i => lineKey(i) === lineKey(line))
       if (existing) {
-        return prev.map(i => i.id === product.id ? { ...i, qty: i.qty + 1 } : i)
+        return prev.map(i => lineKey(i) === lineKey(line) ? { ...i, qty: i.qty + 1 } : i)
       }
-      return [...prev, { ...product, qty: 1 }]
+      return [...prev, { ...line, qty: 1 }]
     })
   }
 
-  // remove a product entirely
-  function removeItem(id) {
-    setItems(prev => prev.filter(i => i.id !== id))
+  // remove one cart line entirely
+  function removeItem(key) {
+    setItems(prev => prev.filter(i => lineKey(i) !== key))
   }
 
   // set exact quantity; remove if qty reaches 0
-  function updateQty(id, qty) {
-    if (qty <= 0) return removeItem(id)
-    setItems(prev => prev.map(i => i.id === id ? { ...i, qty } : i))
+  function updateQty(key, qty) {
+    if (qty <= 0) return removeItem(key)
+    setItems(prev => prev.map(i => lineKey(i) === key ? { ...i, qty } : i))
   }
 
   function clearCart() {
@@ -46,7 +52,7 @@ export function CartProvider({ children }) {
   const total = items.reduce((sum, i) => sum + i.price * i.qty, 0)
 
   return (
-    <CartContext.Provider value={{ items, addItem, removeItem, updateQty, clearCart, total }}>
+    <CartContext.Provider value={{ items, addItem, removeItem, updateQty, clearCart, total, lineKey }}>
       {children}
     </CartContext.Provider>
   )
