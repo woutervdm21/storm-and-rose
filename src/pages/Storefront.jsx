@@ -193,13 +193,20 @@ export default function Storefront() {
             </h2>
             <div className="space-y-4 text-gray-600 dark:text-gray-300 leading-relaxed">
               <p>
-                Born from a deep passion for warmth, beauty, and intentional living, Storm &amp; Rose crafts luxury soy blend candles that turn everyday moments into something extraordinary.
+                Storm &amp; Rose is a mother-and-daughter candle business born from our shared love of creativity, beautiful fragrances, and handcrafted treasures.
               </p>
               <p>
-                Every candle is hand-poured with care using premium fragrance oils and natural soy wax — designed not just to fill a room with scent, but to tell a story. Our four collections — Ember, Roots, Tides, and Zephyr — each capture a different mood, a different world.
+                We create luxury soy blend candles that are anything but ordinary. Each candle is hand-poured with care using quality wax blends and premium fragrances — designed not only to fill your space with beautiful scent, but to become part of the experience.
               </p>
               <p>
-                We are a Storm of Faith venture, based in Mpumalanga, South Africa. Small batch. Handcrafted. Made with love.
+                From candles that look almost too delicious to burn, to beautiful designs inspired by bouquets of flowers, we love creating pieces that are unique, imaginative, and made to stand out.
+              </p>
+              <p>
+                Our four collections — Ember, Roots, Tides, and Zephyr — each capture a different mood and tell a different story.
+              </p>
+              {/* sign-off, set apart from the body copy */}
+              <p className="font-serif italic text-lg text-collection pt-2">
+                Handcrafted with love. Created to be remembered.
               </p>
             </div>
           </div>
