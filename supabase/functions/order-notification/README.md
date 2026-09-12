@@ -2,6 +2,20 @@
 
 Emails the shop when a new order is placed.
 
+## Status
+
+Deployed to project `enpyghydpklvuhaicwrr` on 2026-09-12, with the
+`on_order_created` trigger live on `orders` (see
+`sql/002_order_notification_webhook.sql`).
+
+`ORDER_EMAIL_TO`, `ORDER_EMAIL_FROM` and `WEBHOOK_SECRET` are set.
+**`RESEND_API_KEY` is still outstanding** — until it is set, the function
+runs on every order but the send fails.
+
+Deploys must use `--no-verify-jwt`: the trigger calls the function without a
+Supabase JWT, so without that flag the platform rejects the request before
+the function's own secret check runs.
+
 ## One-time setup
 
 1. **Create a Resend account** at resend.com and make an API key.
