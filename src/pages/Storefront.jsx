@@ -192,12 +192,8 @@ export default function Storefront() {
         <div id="candles" className="max-w-6xl mx-auto px-4 py-24 md:py-32">
 
         {/* section header */}
-        <div className="mb-12">
-          <p className="eyebrow mb-4 transition-colors duration-500">Our Collections</p>
-          <h2 className="font-serif text-4xl md:text-5xl leading-[1.1]
-                         text-rose-deep dark:text-cream transition-colors duration-500">
-            Four moods, four worlds
-          </h2>
+        <div className="mb-10">
+          <p className="eyebrow transition-colors duration-500">Our Collections</p>
         </div>
 
         {/* ── Collection selector ── */}
