@@ -149,7 +149,7 @@ export default function Storefront() {
           <img
             src="/images/Logo1.png"
             alt="Storm & Rose"
-            className="h-20 w-20 object-contain mx-auto mb-10 opacity-95"
+            className="h-40 w-40 object-contain mx-auto mb-10 opacity-95"
           />
           <p className="eyebrow mb-6 transition-colors duration-500">
             Handcrafted in Mpumalanga
@@ -182,7 +182,7 @@ export default function Storefront() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
           <div className="relative order-2 md:order-1">
             <div className="photo-shadow relative rounded-2xl overflow-hidden">
-              <img src="/images/Rooibos.png" alt="Storm & Rose candles" className="w-full h-80 md:h-[26rem] object-cover" />
+              <img src="/images/AboutUsSample.jpg" alt="A handcrafted Storm & Rose flower candle bouquet" className="w-full h-80 md:h-[30rem] object-cover" />
             </div>
           </div>
           <div className="order-1 md:order-2">
