@@ -1,4 +1,4 @@
-// Admin categories — drag products into the 4 collection columns
+// Admin categories — drag products into the collection columns
 import { useEffect, useState } from 'react'
 import { DndContext, DragOverlay, useDroppable, useDraggable, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
 import { toast } from 'sonner'
@@ -6,7 +6,10 @@ import { supabase } from '../../lib/supabase'
 
 const UNCATEGORISED = '__uncategorised__'
 
-const COLLECTION_COLORS = { Ember: '#C47D3E', Roots: '#4A7C59', Tides: '#2E6B9E', Zephyr: '#B8960C' }
+const COLLECTION_COLORS = {
+  Ember: '#C47D3E', Roots: '#4A7C59', Tides: '#2E6B9E', Zephyr: '#B8960C',
+  'Limited Edition': '#B76E79',
+}
 
 export default function AdminCategories() {
   const [products, setProducts]           = useState([])
@@ -68,7 +71,7 @@ export default function AdminCategories() {
       <p className="text-sm text-gray-500 dark:text-gray-400 mb-8">Drag products into a collection to assign them.</p>
 
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
-        <div className="flex gap-4 overflow-x-auto pb-6">
+        <div className="grid gap-4 pb-6 grid-cols-[repeat(auto-fill,minmax(12rem,1fr))]">
           {columns.map(col => (
             <CategoryColumn
               key={col.id}
@@ -93,15 +96,15 @@ function CategoryColumn({ column, products }) {
   const accentColor = COLLECTION_COLORS[column.name] ?? null
 
   return (
-    <div className="flex-shrink-0 w-56">
+    <div className="min-w-0">
       <div className="flex items-center justify-between mb-3">
         <h2
-          className="font-semibold text-sm"
+          className="font-semibold text-sm leading-tight"
           style={accentColor ? { color: accentColor } : {}}
         >
           {column.name}
         </h2>
-        <span className="text-xs text-gray-400">{products.length}</span>
+        <span className="text-xs text-gray-400 flex-shrink-0">{products.length}</span>
       </div>
 
       <div
