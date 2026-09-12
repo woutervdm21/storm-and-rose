@@ -72,6 +72,9 @@ export default function Checkout() {
       .single()
 
     if (orderError) {
+      // the customer gets the friendly line; the real cause goes to the
+      // console, so a failure is diagnosable without guessing
+      console.error('Order insert failed', orderError)
       toast.error('Could not place order. Please try again.')
       setError('Could not place order. Please try again.')
       setSubmitting(false)
@@ -91,6 +94,7 @@ export default function Checkout() {
     const { error: itemsError } = await supabase.from('order_items').insert(orderItems)
 
     if (itemsError) {
+      console.error('Order items insert failed', itemsError)
       toast.error('Order created but items failed to save. Please contact us.')
       setError('Order created but items failed to save. Please contact us.')
       setSubmitting(false)
