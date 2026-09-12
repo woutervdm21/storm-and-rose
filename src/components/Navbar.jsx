@@ -1,4 +1,4 @@
-// Top navigation — logo, nav links, cart, dark/light toggle
+// Top navigation — wordmark, nav links, cart, dark/light toggle
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useTheme } from '../context/ThemeContext'
@@ -38,14 +38,22 @@ export default function Navbar() {
   const linkClass = 'text-[0.8rem] font-medium text-navy/80 dark:text-cream/80 hover:text-rose-deep dark:hover:text-rose-dust transition-colors duration-300'
 
   return (
-    <header className="sticky top-0 z-50 backdrop-blur-md border-b border-rose-dust/15
-                       bg-col-surface/90 dark:bg-col-surface-dark/90 transition-colors duration-500">
+    // backgroundImage is a flat wash of the collection colour laid over the
+    // translucent surface — enough tint to read as coloured, sheer enough
+    // that the blur still shows through
+    <header
+      className="sticky top-0 z-50 backdrop-blur-md border-b border-rose-dust/25
+                 bg-col-surface/80 dark:bg-col-surface-dark/80 transition-colors duration-500"
+      style={{
+        backgroundImage:
+          'linear-gradient(rgb(var(--col-primary-rgb) / 0.14), rgb(var(--col-primary-rgb) / 0.14))',
+      }}
+    >
       <nav className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
 
-        {/* logo */}
-        <Link to="/" className="flex items-center gap-2 flex-shrink-0">
-          <img src="/images/Logo1.png" alt="Storm & Rose" className="h-9 w-9 object-contain" />
-          <span className="font-serif text-lg text-rose-deep dark:text-cream tracking-tight hidden sm:block transition-colors duration-500">
+        {/* wordmark */}
+        <Link to="/" className="flex-shrink-0">
+          <span className="font-serif text-lg sm:text-xl text-rose-deep dark:text-cream tracking-tight transition-colors duration-500">
             Storm &amp; Rose
           </span>
         </Link>
