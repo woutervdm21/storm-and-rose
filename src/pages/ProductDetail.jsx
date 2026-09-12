@@ -71,6 +71,7 @@ export default function ProductDetail() {
         title={product.name}
         description={product.description}
         image={images[0] ?? product.image_url}
+        type="product"
       />
 
       {/* breadcrumb */}

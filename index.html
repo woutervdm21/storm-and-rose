@@ -3,7 +3,50 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Storm &amp; Rose</title>
+
+    <!--
+      These tags are duplicated by Meta.jsx at runtime, but they must also be
+      here in the raw HTML: WhatsApp, Facebook and Instagram fetch the page
+      without executing JavaScript, so a shared link would otherwise preview
+      with no description and no image.
+    -->
+    <title>Storm &amp; Rose | Luxury Handcrafted Candles</title>
+    <meta name="description" content="Luxury candles &amp; thoughtful designs, handcrafted with love. Hand-poured soy blend candles from Mpumalanga, South Africa." />
+    <link rel="canonical" href="https://stormandrose.co.za/" />
+
+    <link rel="icon" type="image/png" href="/images/Logo1.png" />
+    <link rel="apple-touch-icon" href="/images/Logo1.png" />
+    <meta name="theme-color" content="#6D2E46" />
+
+    <meta property="og:type"        content="website" />
+    <meta property="og:site_name"   content="Storm &amp; Rose" />
+    <meta property="og:title"       content="Storm &amp; Rose | Luxury Handcrafted Candles" />
+    <meta property="og:description" content="Luxury candles &amp; thoughtful designs, handcrafted with love. Hand-poured soy blend candles from Mpumalanga, South Africa." />
+    <meta property="og:image"       content="https://stormandrose.co.za/images/AboutUsSample.jpg" />
+    <meta property="og:url"         content="https://stormandrose.co.za/" />
+    <meta property="og:locale"      content="en_ZA" />
+    <meta name="twitter:card"       content="summary_large_image" />
+
+    <!-- Tells Google this is a real local business, for map and knowledge panels -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "LocalBusiness",
+        "name": "Storm & Rose",
+        "description": "Luxury soy blend candles, hand-poured in Mpumalanga, South Africa.",
+        "url": "https://stormandrose.co.za",
+        "image": "https://stormandrose.co.za/images/AboutUsSample.jpg",
+        "email": "Stormyvisions@yahoo.com",
+        "telephone": "+27796499728",
+        "address": {
+          "@type": "PostalAddress",
+          "addressRegion": "Mpumalanga",
+          "addressCountry": "ZA"
+        },
+        "areaServed": "ZA",
+        "priceRange": "R35 - R280"
+      }
+    </script>
     <!-- Google Fonts: Playfair Display (display/headings) + Inter (body & UI) -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
