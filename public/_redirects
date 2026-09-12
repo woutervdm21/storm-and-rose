@@ -1,4 +1,0 @@
-# React Router owns the routes, so every path must be served index.html and
-# resolved in the browser. Without this, loading /cart or /admin/orders
-# directly — or refreshing on them — returns a 404 from the CDN.
-/*    /index.html   200

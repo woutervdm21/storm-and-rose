@@ -187,6 +187,11 @@ no Worker script — `wrangler.jsonc` points Cloudflare at the built `dist`
 output, with `not_found_handling: "single-page-application"` so React Router
 routes like `/cart` and `/admin/orders` survive a direct load or refresh.
 
+Do not add a `public/_redirects` file with a `/* /index.html 200` rule as
+well. Workers static assets reads `_redirects`, and alongside
+`not_found_handling` it rejects the rule as an infinite loop, failing the
+deploy after the assets have already uploaded.
+
 1. Push to GitHub (`woutervdm21/storm-and-rose`)
 2. Cloudflare dashboard → **Workers & Pages** → connect the repo
 3. Build settings:
