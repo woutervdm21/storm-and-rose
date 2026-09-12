@@ -69,9 +69,6 @@
    BANNER ANIMATIONS
    ───────────────────────────────────────────── */
 
-/* Rotating conic-gradient border on the active collection banner.
-   @property is needed to animate a CSS custom property used inside
-   conic-gradient — supported in all modern browsers since 2023. */
 /* Quick press response when a banner is clicked */
 @keyframes click-press {
   0%   { transform: scale(1);     }
@@ -115,71 +112,45 @@
 
 /* ─────────────────────────────────────────────
    SECTION ATMOSPHERE
-   Candlelight glow, film grain, and wax-drip
-   section separators — all collection-aware.
+   One calm, collection-tinted glow behind the hero.
+   No flicker, no grain — the light does the work.
    ───────────────────────────────────────────── */
-
-/* Irregular flicker, like a candle flame disturbed by air */
-@keyframes candle-flicker {
-  0%, 100% { opacity: .85; transform: scaleX(1)    translateX(0); }
-  18%      { opacity: .65; transform: scaleX(1.05) translateX(-8px); }
-  36%      { opacity: 1;   transform: scaleX(.96)  translateX(5px); }
-  54%      { opacity: .7;  transform: scaleX(1.03) translateX(-4px); }
-  72%      { opacity: .95; transform: scaleX(.98)  translateX(7px); }
-  86%      { opacity: .75; transform: scaleX(1.02) translateX(-2px); }
+.hero-glow {
+  background: radial-gradient(ellipse 70% 60% at 50% 100%,
+              rgb(var(--col-primary-rgb) / 0.18) 0%, transparent 70%);
+  transition: background .6s ease;
+}
+.dark .hero-glow {
+  background: radial-gradient(ellipse 70% 60% at 50% 100%,
+              rgb(var(--col-primary-rgb) / 0.13) 0%, transparent 70%);
 }
 
-.candle-glow {
-  animation: candle-flicker 5s ease-in-out infinite;
+/* Hairline rule used to separate sections instead of a drawn divider */
+.hairline {
+  height: 1px;
+  background: rgb(var(--col-primary-rgb) / 0.18);
+  transition: background .5s ease;
 }
 
-/* Hero glows — light mode needs hotter alphas to read against pale bgs */
-.hero-glow-top {
-  background: radial-gradient(ellipse at 50% 0%, rgb(var(--col-primary-rgb) / 0.30) 0%, transparent 65%);
-}
-.dark .hero-glow-top {
-  background: radial-gradient(ellipse at 50% 0%, rgb(var(--col-primary-rgb) / 0.15) 0%, transparent 65%);
-}
-
-.hero-glow-bottom {
-  background: radial-gradient(ellipse at 50% 115%, rgb(var(--col-primary-rgb) / 0.38) 0%, transparent 65%);
-}
-.dark .hero-glow-bottom {
-  background: radial-gradient(ellipse at 50% 115%, rgb(var(--col-primary-rgb) / 0.25) 0%, transparent 65%);
-}
-
-/* Photo shadow — collection-tinted in light mode, plain depth in dark */
+/* Product / feature imagery — a soft, neutral lift rather than a tinted glow */
 .photo-shadow {
-  box-shadow: 0 24px 48px -12px rgb(var(--col-deep-rgb) / 0.35);
+  box-shadow: 0 20px 50px -20px rgb(0 0 0 / 0.28);
   transition: box-shadow .5s ease;
 }
 .dark .photo-shadow {
-  box-shadow: 0 24px 48px -12px rgb(0 0 0 / 0.6);
+  box-shadow: 0 20px 50px -20px rgb(0 0 0 / 0.65);
 }
-
-/* Fine film grain — barely-there in light mode, richer in dark */
-.grain {
-  pointer-events: none;
-  opacity: .05;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-.dark .grain { opacity: .09; }
-
-/* Wax-drip separators pick up the colour of the section above
-   and drip it onto the section below (fill = currentColor). */
-.wax-fill-bg      { color: var(--col-bg);      transition: color .5s ease; }
-.wax-fill-surface { color: var(--col-surface); transition: color .5s ease; }
-.dark .wax-fill-bg      { color: var(--col-bg-dark); }
-.dark .wax-fill-surface { color: var(--col-surface-dark); }
 
 /* ─────────────────────────────────────────────
    BASE STYLES
    ───────────────────────────────────────────── */
 @layer base {
   body {
-    @apply font-sans;
+    @apply font-sans antialiased;
     background-color: var(--col-bg);
     color: #1A1A2E;
+    font-size: 0.9375rem;
+    line-height: 1.65;
     transition: background-color 0.5s ease, color 0.3s ease;
   }
 
@@ -189,7 +160,22 @@
   }
 
   h1, h2, h3, h4 {
-    @apply font-serif;
+    @apply font-serif font-normal;
+    letter-spacing: -0.02em;
+  }
+
+  /* Small uppercase labels ("Our Story", "Our Collections").
+     On dark backgrounds the raw collection colour is too dim at this
+     size, so lift it toward cream while keeping the hue. */
+  .eyebrow {
+    @apply font-sans text-[0.65rem] font-medium uppercase;
+    letter-spacing: 0.22em;
+    /* pulled toward the deep tone so it clears contrast on pale backgrounds */
+    color: color-mix(in srgb, rgb(var(--col-primary-rgb)) 45%, rgb(var(--col-deep-rgb)));
+    transition: color .5s ease;
+  }
+  .dark .eyebrow {
+    color: color-mix(in srgb, rgb(var(--col-primary-rgb)) 55%, #F5F3F1);
   }
 }
 
@@ -200,7 +186,7 @@
 
   /* Form inputs */
   .input-field {
-    @apply w-full rounded-lg px-4 py-2
+    @apply w-full rounded-xl px-4 py-2.5
            border border-rose-dust/40
            bg-col-surface dark:bg-col-surface-dark
            text-navy dark:text-cream
@@ -216,10 +202,11 @@
     Both always have strong contrast regardless of collection.
   */
   .btn-primary {
-    @apply font-semibold py-2 px-5 rounded-lg transition-colors duration-300
+    @apply font-medium text-[0.7rem] uppercase tracking-[0.16em]
+           py-3 px-7 rounded-full transition-all duration-300
            disabled:opacity-40 cursor-pointer
            bg-rose-deep text-white hover:bg-rose-mid
-           dark:bg-cream dark:text-rose-deep dark:hover:brightness-110;
+           dark:bg-cream dark:text-rose-deep dark:hover:brightness-105;
   }
 
   /*
@@ -228,8 +215,9 @@
     Dark mode:  transparent + collection primary border & text
   */
   .btn-secondary {
-    @apply font-semibold py-2 px-5 rounded-lg transition-colors duration-300
-           border-2 border-rose-deep text-rose-deep
+    @apply font-medium text-[0.7rem] uppercase tracking-[0.16em]
+           py-3 px-7 rounded-full transition-all duration-300
+           border border-rose-deep text-rose-deep
            hover:bg-rose-deep/10
            dark:border-rose-dust dark:text-rose-dust
            dark:hover:bg-rose-dust/10;

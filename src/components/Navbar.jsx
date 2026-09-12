@@ -1,4 +1,4 @@
-// Top navigation — logo, nav links, cart, dark/light toggle, collection badge, admin
+// Top navigation — logo, nav links, cart, dark/light toggle
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useCart } from '../context/CartContext'
 import { useTheme } from '../context/ThemeContext'
@@ -35,16 +35,17 @@ export default function Navbar() {
   const scrollTo  = useScrollTo()
   const cartCount = items.reduce((sum, i) => sum + i.qty, 0)
 
-  const linkClass = 'text-sm text-navy dark:text-cream hover:text-rose-deep dark:hover:text-rose-dust transition-colors duration-300'
+  const linkClass = 'text-[0.8rem] font-medium text-navy/80 dark:text-cream/80 hover:text-rose-deep dark:hover:text-rose-dust transition-colors duration-300'
 
   return (
-    <header className="sticky top-0 z-50 bg-col-surface dark:bg-col-surface-dark transition-colors duration-500 shadow-sm">
+    <header className="sticky top-0 z-50 backdrop-blur-md border-b border-rose-dust/15
+                       bg-col-surface/90 dark:bg-col-surface-dark/90 transition-colors duration-500">
       <nav className="max-w-6xl mx-auto px-4 h-16 flex items-center justify-between gap-4">
 
         {/* logo */}
         <Link to="/" className="flex items-center gap-2 flex-shrink-0">
-          <img src="/images/Logo1.png" alt="Storm & Rose" className="h-12 w-12 object-contain" />
-          <span className="font-serif text-lg text-rose-deep tracking-wide hidden sm:block transition-colors duration-500">
+          <img src="/images/Logo1.png" alt="Storm & Rose" className="h-9 w-9 object-contain" />
+          <span className="font-serif text-lg text-rose-deep dark:text-cream tracking-tight hidden sm:block transition-colors duration-500">
             Storm &amp; Rose
           </span>
         </Link>
@@ -93,21 +94,8 @@ export default function Navbar() {
               </svg>
             )}
           </button>
-
-          {/* admin */}
-          <Link to="/admin" className="text-xs text-rose-mid hover:text-rose-deep dark:hover:text-rose-dust transition-colors">
-            Admin
-          </Link>
         </div>
       </nav>
-
-      {/* collection accent line */}
-      <div
-        className="h-0.5 w-full transition-all duration-500"
-        style={{
-          background: `linear-gradient(to right, transparent, rgb(var(--col-primary-rgb)), rgb(var(--col-deep-rgb)), rgb(var(--col-primary-rgb)), transparent)`,
-        }}
-      />
     </header>
   )
 }

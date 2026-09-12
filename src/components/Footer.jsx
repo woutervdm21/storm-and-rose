@@ -77,7 +77,7 @@ export default function Footer() {
           <h3 className="font-serif text-rose-deep dark:text-rose-dust transition-colors duration-500">Quick Links</h3>
           <button onClick={goToCandles} className="text-left text-sm text-gray-600 dark:text-gray-400 hover:text-rose-dust transition-colors">Shop</button>
           <Link to="/cart"  className="text-sm text-gray-600 dark:text-gray-400 hover:text-rose-dust transition-colors">Cart</Link>
-          <Link to="/admin" className="text-sm text-gray-600 dark:text-gray-400 hover:text-rose-dust transition-colors">Admin</Link>
+
         </div>
       </div>
 

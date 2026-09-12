@@ -23,7 +23,7 @@ export default {
       },
       fontFamily: {
         serif: ['"Playfair Display"', 'serif'],
-        sans:  ['Lato', 'sans-serif'],
+        sans:  ['Inter', 'system-ui', 'sans-serif'],
       },
     },
   },

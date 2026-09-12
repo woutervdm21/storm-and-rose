@@ -23,40 +23,6 @@ const scrollBehavior = () =>
 // Default Storm & Rose accent (shown when no collection is selected)
 const DEFAULT_RGB = '183,110,121'
 
-// Silk-wave section separator. Sits at the top of a section and lets the
-// PREVIOUS section's colour flow onto it (fillClass sets currentColor).
-// Two layers: a translucent echo behind a solid wave, for a soft sense of depth.
-function WaxDivider({ fillClass, flip = false }) {
-  return (
-    <div className={fillClass} aria-hidden="true" style={flip ? { transform: 'scaleX(-1)' } : undefined}>
-      <svg viewBox="0 0 1440 56" preserveAspectRatio="none" className="block w-full h-8 md:h-12">
-        {/* translucent echo, drifting a little deeper */}
-        <path
-          fill="currentColor"
-          opacity="0.35"
-          d="M0,0 H1440 V22
-             C1330,34 1240,46 1110,42
-             C980,38 900,20 760,24
-             C620,28 540,46 400,46
-             C260,46 150,28 60,30
-             C35,31 15,28 0,26
-             Z"
-        />
-        <path
-          fill="currentColor"
-          d="M0,0 H1440 V18
-             C1360,26 1280,34 1160,32
-             C1020,30 940,14 800,16
-             C660,18 580,36 440,36
-             C300,36 180,22 80,24
-             C50,25 20,22 0,18
-             Z"
-        />
-      </svg>
-    </div>
-  )
-}
-
 export default function Storefront() {
   const [products, setProducts]     = useState([])
   const [categories, setCategories] = useState([])
@@ -149,61 +115,55 @@ export default function Storefront() {
       {/* ── Hero ─────────────────────────────────────── */}
       <section
         id="home"
-        className="relative overflow-hidden py-20 md:py-28 px-4 text-center
+        className="relative overflow-hidden py-24 md:py-32 px-4 text-center
                    bg-col-bg dark:bg-col-bg-dark transition-colors duration-500"
       >
-        {/* collection-coloured radial glow from above */}
-        <div className="hero-glow-top absolute inset-0 pointer-events-none" />
-        {/* candlelight rising from below — flickers like a live flame */}
-        <div className="hero-glow-bottom candle-glow absolute inset-x-0 bottom-0 h-2/3 pointer-events-none" />
-        <div className="grain absolute inset-0" />
-        <div className="relative z-10 max-w-xl mx-auto">
+        {/* a single calm glow, rising from below */}
+        <div className="hero-glow absolute inset-0 pointer-events-none" />
+        <div className="relative z-10 max-w-2xl mx-auto">
           <img
             src="/images/Logo1.png"
             alt="Storm & Rose"
-            className="h-36 w-36 object-contain mx-auto mb-6 opacity-90"
-            style={{ filter: 'drop-shadow(0 0 26px rgb(var(--col-primary-rgb) / 0.5))' }}
+            className="h-20 w-20 object-contain mx-auto mb-10 opacity-95"
           />
-          <h1 className="font-serif text-5xl md:text-6xl mb-4 leading-tight
+          <p className="eyebrow mb-6 transition-colors duration-500">
+            Handcrafted in Mpumalanga
+          </p>
+          <h1 className="font-serif text-6xl md:text-7xl mb-6 leading-[1.05]
                          text-rose-deep dark:text-cream transition-colors duration-500">
             Storm &amp; Rose
           </h1>
-          <div className="flex items-center gap-4 mb-8">
-            <span className="flex-1 h-px bg-gradient-to-r from-transparent to-rose-dust/50 transition-colors duration-500" />
-            <p className="text-base md:text-lg leading-relaxed
-                          text-gray-600 dark:text-gray-400 transition-colors duration-300">
-              Luxury Candles &amp; Thoughtful Designs,<br />Handcrafted with Love
-            </p>
-            <span className="flex-1 h-px bg-gradient-to-l from-transparent to-rose-dust/50 transition-colors duration-500" />
-          </div>
+          <p className="text-base md:text-lg leading-relaxed max-w-md mx-auto mb-12
+                        text-gray-600 dark:text-gray-400 transition-colors duration-300">
+            Luxury candles and thoughtful designs, handcrafted with love.
+          </p>
           <button
             onClick={() => {
               document.getElementById('candles')
                 ?.scrollIntoView({ behavior: scrollBehavior(), block: 'start' })
             }}
-            className="btn-primary px-8 py-3 text-sm tracking-wide"
+            className="btn-primary"
           >
             Explore Collections
           </button>
         </div>
+        {/* hairline hands the eye down to the next section */}
+        <div className="hairline absolute bottom-0 inset-x-0" />
       </section>
 
       {/* ── About Us — tinted band; hero's colour drips onto it ── */}
       <section id="about" className="relative bg-col-surface dark:bg-col-surface-dark transition-colors duration-500">
-        <WaxDivider fillClass="wax-fill-bg" />
-        <div className="grain absolute inset-0" />
-        <div className="relative max-w-6xl mx-auto px-4 pt-8 pb-16 md:pt-12 md:pb-24">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-center">
+        <div className="relative max-w-6xl mx-auto px-4 py-24 md:py-32">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-16 items-center">
           <div className="relative order-2 md:order-1">
-            {/* offset frame floating behind the photo */}
-            <div className="absolute inset-0 translate-x-3 translate-y-3 rounded-2xl border-2 border-rose-dust/40 transition-colors duration-500" aria-hidden="true" />
             <div className="photo-shadow relative rounded-2xl overflow-hidden">
-              <img src="/images/Rooibos.png" alt="Storm & Rose candles" className="w-full h-80 md:h-full object-cover" />
+              <img src="/images/Rooibos.png" alt="Storm & Rose candles" className="w-full h-80 md:h-[26rem] object-cover" />
             </div>
           </div>
           <div className="order-1 md:order-2">
-            <p className="text-xs uppercase tracking-[0.3em] text-rose-dust mb-3 transition-colors duration-500">Our Story</p>
-            <h2 className="font-serif text-4xl text-rose-deep dark:text-rose-dust mb-6 transition-colors duration-500">
+            <p className="eyebrow mb-5 transition-colors duration-500">Our Story</p>
+            <h2 className="font-serif text-4xl md:text-5xl leading-[1.1] mb-7
+                           text-rose-deep dark:text-rose-dust transition-colors duration-500">
               About Storm &amp; Rose
             </h2>
             <div className="space-y-4 text-gray-600 dark:text-gray-300 leading-relaxed">
@@ -224,18 +184,15 @@ export default function Storefront() {
 
       {/* ── Collections — the About band's colour drips onto it ── */}
       <section className="relative bg-col-bg dark:bg-col-bg-dark transition-colors duration-500">
-        <WaxDivider fillClass="wax-fill-surface" flip />
-        <div id="candles" className="max-w-6xl mx-auto px-4 pt-6 pb-12">
+        <div id="candles" className="max-w-6xl mx-auto px-4 py-24 md:py-32">
 
-        {/* ornamental header */}
-        <div className="flex items-center gap-3 mb-8">
-          <div className="flex-1 h-px bg-gradient-to-r from-transparent to-rose-dust/50 transition-colors duration-500" />
-          <span className="text-rose-dust/60 text-[0.5rem] transition-colors duration-500">◆</span>
-          <span className="text-xs uppercase tracking-[0.3em] text-rose-dust font-semibold whitespace-nowrap transition-colors duration-500">
-            Our Collections
-          </span>
-          <span className="text-rose-dust/60 text-[0.5rem] transition-colors duration-500">◆</span>
-          <div className="flex-1 h-px bg-gradient-to-l from-transparent to-rose-dust/50 transition-colors duration-500" />
+        {/* section header */}
+        <div className="mb-12">
+          <p className="eyebrow mb-4 transition-colors duration-500">Our Collections</p>
+          <h2 className="font-serif text-4xl md:text-5xl leading-[1.1]
+                         text-rose-deep dark:text-cream transition-colors duration-500">
+            Four moods, four worlds
+          </h2>
         </div>
 
         {COLLECTION_META.map(col => {
@@ -245,7 +202,7 @@ export default function Storefront() {
           const colProducts = products.filter(p => p.category_id === catId)
 
           return (
-            <div key={col.slug} ref={el => bannerRefs.current[col.slug] = el} className="mb-2 last:mb-0">
+            <div key={col.slug} ref={el => bannerRefs.current[col.slug] = el} className="mb-3 last:mb-0">
 
               {/* ── Banner ── */}
               <div>
@@ -261,27 +218,27 @@ export default function Storefront() {
                                focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
                                focus-visible:ring-rose-dust focus-visible:ring-offset-col-bg"
                     style={{
-                      borderRadius: '12px',
-                      height:       isActive ? '116px' : '72px',
-                      backgroundColor: '#161210',
+                      borderRadius: '16px',
+                      height:       isActive ? '132px' : '88px',
+                      backgroundColor: '#12100F',
                       transition:   `height ${COLLAPSE_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1)`,
                     }}
                   >
-                    {/* collection-coloured glow when active */}
+                    {/* collection-coloured wash, stronger when open */}
                     <div
                       className="absolute inset-0 transition-opacity duration-500"
                       style={{
-                        opacity:    isActive ? 1 : 0,
-                        background: `radial-gradient(ellipse at 50% 130%, rgba(${col.rgb}, 0.35) 0%, transparent 70%)`,
+                        opacity:    isActive ? 1 : 0.45,
+                        background: `linear-gradient(105deg, rgba(${col.rgb}, 0.22) 0%, transparent 55%)`,
                       }}
                     />
-                    {/* thin poster-style frame */}
+                    {/* left accent bar — the only chrome the banner needs */}
                     <div
-                      className="absolute pointer-events-none transition-all duration-500"
+                      className="absolute left-0 top-0 bottom-0 transition-all duration-500"
                       style={{
-                        inset:        '6px',
-                        borderRadius: '8px',
-                        border:       `1px solid rgba(${col.rgb}, ${isActive ? 0.7 : 0.3})`,
+                        width:           isActive ? '4px' : '3px',
+                        backgroundColor: col.color,
+                        opacity:         isActive ? 1 : 0.55,
                       }}
                     />
                     <div
@@ -292,20 +249,14 @@ export default function Storefront() {
                         className="font-serif leading-none transition-all duration-500"
                         style={{
                           color:         col.color,
-                          letterSpacing: '0.1em',
-                          fontSize:      isActive ? 'clamp(2rem, 5vw, 2.75rem)' : 'clamp(1.4rem, 3.5vw, 1.75rem)',
+                          letterSpacing: '0.04em',
+                          fontSize:      isActive ? 'clamp(2.1rem, 5vw, 2.9rem)' : 'clamp(1.5rem, 3.5vw, 1.9rem)',
                         }}
                       >
                         {col.name.toUpperCase()}
                       </span>
-                      <span className="hidden md:flex flex-col items-center gap-1 absolute left-1/2 -translate-x-1/2">
-                        <span
-                          className="text-[0.6rem] uppercase"
-                          style={{ color: col.color, letterSpacing: '0.35em' }}
-                        >
-                          — Collection —
-                        </span>
-                        <span className="font-serif italic text-sm text-cream/80">
+                      <span className="hidden md:block absolute left-1/2 -translate-x-1/2">
+                        <span className="font-sans text-sm text-cream/70">
                           {col.tagline}
                         </span>
                       </span>
@@ -333,14 +284,6 @@ export default function Storefront() {
                         </svg>
                       </span>
                     </div>
-                    <div
-                      className="absolute bottom-0 left-0 right-0 transition-all duration-500"
-                      style={{
-                        height:          isActive ? '3px' : '2px',
-                        backgroundColor: col.color,
-                        opacity:         isActive ? 1 : 0.4,
-                      }}
-                    />
                   </button>
                 </div>
               </div>
