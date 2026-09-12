@@ -1,20 +1,17 @@
-// Storefront — hero, accordion collection banners, about section
+// Storefront — hero, about section, collection selector + product grid
 import { useEffect, useState, useRef } from 'react'
 import { supabase } from '../lib/supabase'
 import ProductCard from '../components/ProductCard'
 import Meta from '../components/Meta'
 import { useCollection } from '../context/CollectionContext'
+import { useTheme } from '../context/ThemeContext'
 
 const COLLECTION_META = [
-  // image: portrait poster used elsewhere (banners are rendered in HTML below)
-  { slug: 'ember',  name: 'Ember',  tagline: 'Where warmth meets indulgence',               image: '/images/Ember.jpg',  color: '#C47D3E', rgb: '196,125,62', deepRgb: '139,69,19'  },
-  { slug: 'roots',  name: 'Roots',  tagline: 'Rooted in natures beauty',                    image: '/images/Roots.jpg',  color: '#4A7C59', rgb: '74,124,89',  deepRgb: '45,90,61'   },
-  { slug: 'tides',  name: 'Tides',  tagline: 'Flowing serenity, coastal tranquility',       image: '/images/Tides.jpg',  color: '#2E6B9E', rgb: '46,107,158', deepRgb: '26,74,114'  },
-  { slug: 'zephyr', name: 'Zephyr', tagline: 'Lightness, elegance and uplifting fragrance', image: '/images/Zephyr.jpg', color: '#B8960C', rgb: '184,150,12', deepRgb: '138,112,10' },
+  { slug: 'ember',  name: 'Ember',  tagline: 'Where warmth meets indulgence',               color: '#C47D3E', rgb: '196,125,62', deepRgb: '139,69,19'  },
+  { slug: 'roots',  name: 'Roots',  tagline: 'Rooted in natures beauty',                    color: '#4A7C59', rgb: '74,124,89',  deepRgb: '45,90,61'   },
+  { slug: 'tides',  name: 'Tides',  tagline: 'Flowing serenity, coastal tranquility',       color: '#2E6B9E', rgb: '46,107,158', deepRgb: '26,74,114'  },
+  { slug: 'zephyr', name: 'Zephyr', tagline: 'Lightness, elegance and uplifting fragrance', color: '#B8960C', rgb: '184,150,12', deepRgb: '138,112,10' },
 ]
-
-// Collapse animation duration in ms — must match the CSS transition
-const COLLAPSE_DURATION = 500
 
 // Smooth scrolling is motion too — jump instead when the OS asks for less
 const scrollBehavior = () =>
@@ -31,7 +28,8 @@ export default function Storefront() {
   const [flashSlug, setFlashSlug]   = useState(null)
   const [splash, setSplash]         = useState(null)
   const { collection, setCollection } = useCollection()
-  const bannerRefs = useRef({})
+  const { dark } = useTheme()
+  const gridRef = useRef(null)
   const splashTimer = useRef(null)
 
   useEffect(() => {
@@ -59,13 +57,21 @@ export default function Storefront() {
   const categoryIdFor = (slug) =>
     categories.find(c => c.name.toLowerCase() === slug)?.id ?? null
 
+  const activeMeta = COLLECTION_META.find(c => c.slug === collection) ?? null
+
+  // with nothing selected the grid shows the whole catalogue, so products are
+  // never hidden behind a control the visitor has to find first
+  const shownProducts = activeMeta
+    ? products.filter(p => p.category_id === categoryIdFor(activeMeta.slug))
+    : products
+
   function selectCollection(slug, event) {
     // trigger click flash
     setFlashSlug(slug)
     setTimeout(() => setFlashSlug(null), 450)
 
-    // colour splash rippling out from the click point — carries the colours
-    // of the theme we're switching TO (default theme when collapsing)
+    // colour splash rippling out from the click point — carries the colour
+    // of the theme we're switching TO (default theme when clearing)
     const collapsing = collection === slug
     const meta = COLLECTION_META.find(c => c.slug === slug)
     const rgb  = collapsing ? DEFAULT_RGB : meta.rgb
@@ -80,22 +86,21 @@ export default function Storefront() {
     setSplash({ id: Date.now(), x, y, rgb, scale: (maxDist * 2) / 100 * 1.1 })
     splashTimer.current = setTimeout(() => setSplash(null), 1000)
 
-    // clicking the active collection collapses it — no scroll needed
-    if (collapsing) {
-      setCollection(null)
-      return
-    }
-    // only wait for a collapse when one is actually running, otherwise the
-    // first click of a visit stalls for half a second before anything moves
-    const wasOpen = collection !== null
-    setCollection(slug)
-    setTimeout(() => {
-      const el = bannerRefs.current[slug]
-      if (!el) return
+    // clicking the active collection clears the filter back to everything
+    setCollection(collapsing ? null : slug)
+
+    // the grid usually sits right below the cards and needs no scrolling;
+    // only pull it up when the change would otherwise happen off-screen
+    const el = gridRef.current
+    if (!el) return
+    const rect = el.getBoundingClientRect()
+    if (rect.top > window.innerHeight - 140) {
       const navbarHeight = 68
-      const top = el.getBoundingClientRect().top + window.pageYOffset - navbarHeight
-      window.scrollTo({ top, behavior: scrollBehavior() })
-    }, wasOpen ? COLLAPSE_DURATION + 20 : 0)
+      window.scrollTo({
+        top: rect.top + window.pageYOffset - navbarHeight - 24,
+        behavior: scrollBehavior(),
+      })
+    }
   }
 
   return (
@@ -195,150 +200,126 @@ export default function Storefront() {
           </h2>
         </div>
 
-        {COLLECTION_META.map(col => {
-          const isActive    = collection === col.slug
-          const isFlashing  = flashSlug === col.slug
-          const catId       = categoryIdFor(col.slug)
-          const colProducts = products.filter(p => p.category_id === catId)
+        {/* ── Collection selector ── */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-16">
+          {COLLECTION_META.map(col => {
+            const isActive   = collection === col.slug
+            const isFlashing = flashSlug === col.slug
+            const count      = products.filter(p => p.category_id === categoryIdFor(col.slug)).length
+            // the collection colour is too light on cream and too dark on
+            // near-black, so each theme takes the tone that reads against it
+            const nameColor  = dark ? col.color : `rgb(${col.deepRgb})`
 
-          return (
-            <div key={col.slug} ref={el => bannerRefs.current[col.slug] = el} className="mb-3 last:mb-0">
-
-              {/* ── Banner ── */}
-              <div>
-                <div
-                  className={isFlashing ? 'banner-flash' : ''}
-                  style={{ borderRadius: '12px', overflow: 'hidden' }}
-                >
-                  <button
-                    onClick={(e) => selectCollection(col.slug, e)}
-                    aria-expanded={isActive}
-                    aria-controls={`panel-${col.slug}`}
-                    className="group relative w-full overflow-hidden block
-                               focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
-                               focus-visible:ring-rose-dust focus-visible:ring-offset-col-bg"
-                    style={{
-                      borderRadius: '16px',
-                      height:       isActive ? '132px' : '88px',
-                      backgroundColor: '#12100F',
-                      transition:   `height ${COLLAPSE_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1)`,
-                    }}
-                  >
-                    {/* collection-coloured wash, stronger when open */}
-                    <div
-                      className="absolute inset-0 transition-opacity duration-500"
-                      style={{
-                        opacity:    isActive ? 1 : 0.45,
-                        background: `linear-gradient(105deg, rgba(${col.rgb}, 0.22) 0%, transparent 55%)`,
-                      }}
-                    />
-                    {/* left accent bar — the only chrome the banner needs */}
-                    <div
-                      className="absolute left-0 top-0 bottom-0 transition-all duration-500"
-                      style={{
-                        width:           isActive ? '4px' : '3px',
-                        backgroundColor: col.color,
-                        opacity:         isActive ? 1 : 0.55,
-                      }}
-                    />
-                    <div
-                      className={`relative h-full flex items-center px-6 md:px-10 transition-opacity duration-500
-                                  ${isActive ? 'opacity-100' : 'opacity-75 group-hover:opacity-100'}`}
-                    >
-                      <span
-                        className="font-serif leading-none transition-all duration-500"
-                        style={{
-                          color:         col.color,
-                          letterSpacing: '0.04em',
-                          fontSize:      isActive ? 'clamp(2.1rem, 5vw, 2.9rem)' : 'clamp(1.5rem, 3.5vw, 1.9rem)',
-                        }}
-                      >
-                        {col.name.toUpperCase()}
-                      </span>
-                      <span className="hidden md:block absolute left-1/2 -translate-x-1/2">
-                        <span className="font-sans text-sm text-cream/70">
-                          {col.tagline}
-                        </span>
-                      </span>
-                    </div>
-                    {/* click cue — pill reads as tappable on touch, where there is no hover */}
-                    <div className="absolute right-3 md:right-6 top-1/2 -translate-y-1/2">
-                      <span
-                        className="flex items-center gap-1.5 md:gap-2 rounded-full font-sans uppercase
-                                   px-2.5 py-1.5 md:px-3.5 md:py-2
-                                   text-[0.5rem] md:text-[0.6rem] tracking-[0.18em] md:tracking-[0.2em]
-                                   transition-colors duration-500"
-                        style={{
-                          color:           col.color,
-                          border:          `1px solid rgba(${col.rgb}, 0.45)`,
-                          backgroundColor: `rgba(${col.rgb}, 0.08)`,
-                        }}
-                      >
-                        {isActive ? 'Hide' : 'View candles'}
-                        <svg
-                          viewBox="0 0 16 16" fill="none"
-                          className={`w-3.5 h-3.5 transition-transform duration-500 ${isActive ? 'rotate-180' : 'animate-bounce-soft'}`}
-                          style={{ stroke: col.color }}
-                        >
-                          <path d="M3 6 L8 11 L13 6" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                        </svg>
-                      </span>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
-              {/* ── Products (only when active) ── */}
-              <div
-                id={`panel-${col.slug}`}
-                role="region"
-                aria-label={`${col.name} collection`}
+            return (
+              <button
+                key={col.slug}
+                onClick={(e) => selectCollection(col.slug, e)}
+                aria-pressed={isActive}
+                aria-controls="collection-grid"
+                className={`${isFlashing ? 'banner-flash' : ''}
+                           group relative overflow-hidden text-left rounded-2xl
+                           p-5 md:p-6 min-h-[9.5rem] md:min-h-[11rem] flex flex-col
+                           transition-[transform,box-shadow,border-color] duration-300
+                           hover:-translate-y-0.5
+                           focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2
+                           focus-visible:ring-rose-dust focus-visible:ring-offset-col-bg`}
                 style={{
-                  maxHeight:  isActive ? '9999px' : '0px',
-                  overflow:   'hidden',
-                  transition: `max-height ${isActive ? COLLAPSE_DURATION + 100 : COLLAPSE_DURATION}ms cubic-bezier(0.4, 0, 0.2, 1)`,
+                  border:     `1px solid rgba(${col.rgb}, ${isActive ? 0.85 : 0.28})`,
+                  background: `linear-gradient(158deg, rgba(${col.rgb}, ${isActive ? 0.26 : 0.11}) 0%, rgba(${col.rgb}, 0.03) 70%)`,
+                  boxShadow:  isActive ? `0 12px 32px -18px rgba(${col.rgb}, 0.9)` : 'none',
                 }}
               >
-                <div className="py-8">
-                  {loading && (
-                    <div className="flex justify-center py-12">
-                      <div
-                        className="w-7 h-7 border-2 border-t-transparent rounded-full animate-spin"
-                        style={{ borderColor: `${col.color} transparent ${col.color} ${col.color}` }}
-                      />
-                    </div>
-                  )}
-                  {!loading && loadError && (
-                    <div className="text-center py-12">
-                      <p className="font-serif text-xl mb-1" style={{ color: col.color }}>
-                        Something went wrong
-                      </p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        We couldn&apos;t load the candles just now — please refresh to try again.
-                      </p>
-                    </div>
-                  )}
-                  {!loading && !loadError && colProducts.length === 0 && (
-                    <div className="text-center py-12">
-                      <p className="font-serif text-xl mb-1" style={{ color: col.color }}>Coming Soon</p>
-                      <p className="text-sm text-gray-500 dark:text-gray-400">
-                        No candles in this collection yet — check back soon.
-                      </p>
-                    </div>
-                  )}
-                  {!loading && !loadError && colProducts.length > 0 && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
-                      {colProducts.map(product => (
-                        <ProductCard key={product.id} product={product} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
+                {/* count sits top-right, quiet until the card is chosen */}
+                <span
+                  className="absolute top-5 right-5 md:top-6 md:right-6 font-sans text-[0.65rem] tabular-nums
+                             transition-opacity duration-300"
+                  style={{ color: nameColor, opacity: isActive ? 0.85 : 0.5 }}
+                >
+                  {loading ? '' : count}
+                </span>
 
+                <h3
+                  className="font-serif text-2xl md:text-[1.75rem] leading-none mb-2 transition-colors duration-500"
+                  style={{ color: nameColor }}
+                >
+                  {col.name}
+                </h3>
+                <p className="font-sans text-[0.8rem] leading-snug text-gray-600 dark:text-gray-400 mb-auto">
+                  {col.tagline}
+                </p>
+
+                {/* state line — says what a click will do, on touch as well as hover */}
+                <span
+                  className="font-sans text-[0.6rem] uppercase tracking-[0.18em] mt-4 flex items-center gap-1.5
+                             transition-opacity duration-300"
+                  style={{ color: nameColor, opacity: isActive ? 1 : 0.65 }}
+                >
+                  {isActive ? 'Showing' : 'View'}
+                  <svg viewBox="0 0 16 16" fill="none" className="w-3 h-3"
+                       style={{ stroke: nameColor }}>
+                    {isActive
+                      ? <path d="M3 8 L7 12 L13 4" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />
+                      : <path d="M6 3 L11 8 L6 13" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round" />}
+                  </svg>
+                </span>
+              </button>
+            )
+          })}
+        </div>
+
+        {/* ── Products ── */}
+        <div ref={gridRef} id="collection-grid" aria-live="polite">
+          <div className="flex items-baseline justify-between gap-4 mb-8 pb-5 border-b border-rose-dust/20">
+            <h3 className="font-serif text-2xl md:text-3xl text-rose-deep dark:text-cream transition-colors duration-500">
+              {activeMeta ? activeMeta.name : 'All candles'}
+            </h3>
+            {/* clearing the filter is its own control, not a second click on the card */}
+            {activeMeta && (
+              <button
+                onClick={(e) => selectCollection(activeMeta.slug, e)}
+                className="font-sans text-[0.65rem] uppercase tracking-[0.18em] text-collection
+                           hover:opacity-70 transition-opacity whitespace-nowrap"
+              >
+                Show all
+              </button>
+            )}
+          </div>
+
+          {loading && (
+            <div className="flex justify-center py-20">
+              <div className="w-7 h-7 border-2 border-rose-dust border-t-transparent rounded-full animate-spin" />
             </div>
-          )
-        })}
+          )}
+
+          {!loading && loadError && (
+            <div className="text-center py-20">
+              <p className="font-serif text-xl text-rose-deep dark:text-rose-dust mb-1">
+                Something went wrong
+              </p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                We couldn&apos;t load the candles just now — please refresh to try again.
+              </p>
+            </div>
+          )}
+
+          {!loading && !loadError && shownProducts.length === 0 && (
+            <div className="text-center py-20">
+              <p className="font-serif text-xl text-rose-deep dark:text-rose-dust mb-1">Coming Soon</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">
+                No candles in this collection yet — check back soon.
+              </p>
+            </div>
+          )}
+
+          {!loading && !loadError && shownProducts.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
+              {shownProducts.map(product => (
+                <ProductCard key={product.id} product={product} />
+              ))}
+            </div>
+          )}
+        </div>
+
         </div>
       </section>
 

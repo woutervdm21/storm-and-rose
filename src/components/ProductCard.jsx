@@ -113,8 +113,7 @@ export default function ProductCard({ product }) {
 
         {/* name */}
         <Link to={`/products/${product.id}`}>
-          <h2 className="font-serif text-lg leading-snug
-                         text-rose-deep dark:text-rose-dust
+          <h2 className="font-serif text-lg leading-snug text-collection
                          hover:underline transition-colors duration-300">
             {product.name}
           </h2>

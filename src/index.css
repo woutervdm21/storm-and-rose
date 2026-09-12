@@ -184,6 +184,16 @@
    ───────────────────────────────────────────── */
 @layer components {
 
+  /* Collection-tinted text that stays legible in both themes: pulled toward
+     the deep tone on pale backgrounds, toward cream on dark ones. */
+  .text-collection {
+    color: color-mix(in srgb, rgb(var(--col-primary-rgb)) 40%, rgb(var(--col-deep-rgb)));
+    transition: color .5s ease;
+  }
+  .dark .text-collection {
+    color: color-mix(in srgb, rgb(var(--col-primary-rgb)) 62%, #F5F3F1);
+  }
+
   /* Form inputs */
   .input-field {
     @apply w-full rounded-xl px-4 py-2.5
