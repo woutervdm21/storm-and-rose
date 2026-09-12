@@ -74,8 +74,8 @@ export default function ProductDetail() {
         type="product"
       />
 
-      {/* breadcrumb */}
-      <Link to="/" className="inline-flex items-center gap-1 text-sm text-rose-mid hover:text-rose-deep dark:hover:text-rose-dust transition-colors mb-8">
+      {/* breadcrumb — back to the collections, not the top of the page */}
+      <Link to="/" state={{ scrollTo: 'candles' }} className="inline-flex items-center gap-1 text-sm text-rose-mid hover:text-rose-deep dark:hover:text-rose-dust transition-colors mb-8">
         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
         </svg>

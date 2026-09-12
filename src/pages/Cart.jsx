@@ -13,7 +13,7 @@ export default function Cart() {
         <img src="/images/Logo1.png" alt="" className="h-20 w-20 object-contain mx-auto mb-6 opacity-40" />
         <p className="font-serif text-2xl text-rose-deep dark:text-rose-dust mb-2">Your cart is empty</p>
         <p className="text-gray-500 mb-6">Looks like you haven't added anything yet.</p>
-        <Link to="/" className="btn-primary px-8 py-2.5">Browse Candles</Link>
+        <Link to="/" state={{ scrollTo: 'candles' }} className="btn-primary px-8 py-2.5">Browse Candles</Link>
       </main>
     )
   }
@@ -82,16 +82,19 @@ export default function Cart() {
       </ul>
 
       {/* total + actions */}
-      <div className="mt-8 pt-6 border-t border-rose-dust/30 flex justify-between items-center">
+      {/* the total and the buttons sit side by side from small screens up; on a
+          phone they stack, because sharing the row squeezed the amount until it
+          wrapped underneath the "R" */}
+      <div className="mt-8 pt-6 border-t border-rose-dust/30 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-sm text-gray-500">Order total</p>
-          <p className="text-2xl font-semibold">R {total.toFixed(2)}</p>
+          <p className="text-2xl font-semibold whitespace-nowrap">R {total.toFixed(2)}</p>
         </div>
         <div className="flex items-center gap-3">
-          <Link to="/" className="btn-secondary py-3 px-5">
+          <Link to="/" state={{ scrollTo: 'candles' }} className="btn-secondary py-3 px-5 flex-1 text-center whitespace-nowrap sm:flex-none">
             Continue Shopping
           </Link>
-          <Link to="/checkout" className="btn-primary py-3 px-8">
+          <Link to="/checkout" className="btn-primary py-3 px-8 flex-1 text-center whitespace-nowrap sm:flex-none">
             Proceed to Checkout
           </Link>
         </div>

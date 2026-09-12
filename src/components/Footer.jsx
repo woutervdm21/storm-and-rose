@@ -5,20 +5,15 @@ export default function Footer() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Shop → the collections accordion on the home page (navigate home first if needed)
+  // Shop → the collections on the home page (navigate home first if needed)
   function goToCandles() {
-    const scroll = () => {
-      const el = document.getElementById('candles')
-      if (el) {
-        const top = el.getBoundingClientRect().top + window.pageYOffset - 68
-        window.scrollTo({ top, behavior: 'smooth' })
-      }
-    }
     if (location.pathname === '/') {
-      scroll()
+      const el = document.getElementById('candles')
+      const top = el.getBoundingClientRect().top + window.pageYOffset - 68
+      window.scrollTo({ top, behavior: 'smooth' })
     } else {
-      navigate('/')
-      setTimeout(scroll, 300)
+      // ScrollManager scrolls once the collections have actually rendered
+      navigate('/', { state: { scrollTo: 'candles' } })
     }
   }
 
