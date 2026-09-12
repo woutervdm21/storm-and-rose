@@ -6,11 +6,16 @@ import Meta from '../components/Meta'
 import { useCollection } from '../context/CollectionContext'
 import { useTheme } from '../context/ThemeContext'
 
+// category = the name of the matching row in the Supabase `categories` table.
+// hideWhenEmpty = the card is only rendered once products are assigned to it.
 const COLLECTION_META = [
-  { slug: 'ember',  name: 'Ember',  tagline: 'Where warmth meets indulgence',               color: '#C47D3E', rgb: '196,125,62', deepRgb: '139,69,19'  },
-  { slug: 'roots',  name: 'Roots',  tagline: 'Rooted in natures beauty',                    color: '#4A7C59', rgb: '74,124,89',  deepRgb: '45,90,61'   },
-  { slug: 'tides',  name: 'Tides',  tagline: 'Flowing serenity, coastal tranquility',       color: '#2E6B9E', rgb: '46,107,158', deepRgb: '26,74,114'  },
-  { slug: 'zephyr', name: 'Zephyr', tagline: 'Lightness, elegance and uplifting fragrance', color: '#B8960C', rgb: '184,150,12', deepRgb: '138,112,10' },
+  { slug: 'ember',   category: 'ember',           name: 'Ember',           tagline: 'Where warmth meets indulgence',               color: '#C47D3E', rgb: '196,125,62', deepRgb: '139,69,19'  },
+  { slug: 'roots',   category: 'roots',           name: 'Roots',           tagline: 'Rooted in natures beauty',                    color: '#4A7C59', rgb: '74,124,89',  deepRgb: '45,90,61'   },
+  { slug: 'tides',   category: 'tides',           name: 'Tides',           tagline: 'Flowing serenity, coastal tranquility',       color: '#2E6B9E', rgb: '46,107,158', deepRgb: '26,74,114'  },
+  { slug: 'zephyr',  category: 'zephyr',          name: 'Zephyr',          tagline: 'Lightness, elegance and uplifting fragrance', color: '#B8960C', rgb: '184,150,12', deepRgb: '138,112,10' },
+  // no [data-collection="limited"] block in index.css, so selecting it falls
+  // back to the :root rose/plum defaults — the Storm & Rose house colours
+  { slug: 'limited', category: 'limited edition', name: 'Limited Edition', tagline: 'Here for a season, not forever',              color: '#B76E79', rgb: '183,110,121', deepRgb: '109,46,70',  hideWhenEmpty: true },
 ]
 
 // Smooth scrolling is motion too — jump instead when the OS asks for less
@@ -54,15 +59,30 @@ export default function Storefront() {
     fetchData()
   }, [])
 
-  const categoryIdFor = (slug) =>
-    categories.find(c => c.name.toLowerCase() === slug)?.id ?? null
+  const categoryIdFor = (meta) =>
+    categories.find(c => c.name.toLowerCase() === meta.category)?.id ?? null
+
+  const countFor = (meta) =>
+    products.filter(p => p.category_id === categoryIdFor(meta)).length
+
+  // seasonal collections stay hidden until they actually have stock
+  const shownCollections = COLLECTION_META.filter(
+    meta => !meta.hideWhenEmpty || countFor(meta) > 0
+  )
 
   const activeMeta = COLLECTION_META.find(c => c.slug === collection) ?? null
+
+  // if the seasonal collection empties out while it is selected, its card
+  // disappears — drop the filter so the grid doesn't strand the visitor
+  useEffect(() => {
+    if (loading || !activeMeta?.hideWhenEmpty) return
+    if (countFor(activeMeta) === 0) setCollection(null)
+  }, [loading, activeMeta, products, categories])
 
   // with nothing selected the grid shows the whole catalogue, so products are
   // never hidden behind a control the visitor has to find first
   const shownProducts = activeMeta
-    ? products.filter(p => p.category_id === categoryIdFor(activeMeta.slug))
+    ? products.filter(p => p.category_id === categoryIdFor(activeMeta))
     : products
 
   function selectCollection(slug, event) {
@@ -197,11 +217,12 @@ export default function Storefront() {
         </div>
 
         {/* ── Collection selector ── */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-16">
-          {COLLECTION_META.map(col => {
+        <div className={`grid grid-cols-2 gap-3 md:gap-4 mb-16
+                         ${shownCollections.length > 4 ? 'lg:grid-cols-5' : 'lg:grid-cols-4'}`}>
+          {shownCollections.map(col => {
             const isActive   = collection === col.slug
             const isFlashing = flashSlug === col.slug
-            const count      = products.filter(p => p.category_id === categoryIdFor(col.slug)).length
+            const count      = countFor(col)
             // the collection colour is too light on cream and too dark on
             // near-black, so each theme takes the tone that reads against it
             const nameColor  = dark ? col.color : `rgb(${col.deepRgb})`
