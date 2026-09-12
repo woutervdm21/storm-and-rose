@@ -15,7 +15,9 @@ E-commerce web app for the Storm & Rose candle store. Customers can browse produ
 | Backend / DB | Supabase (PostgreSQL) |
 | Auth | Supabase Auth |
 | Storage | Supabase Storage |
-| Hosting | Netlify (static deploy) |
+| Hosting | Cloudflare Workers (static assets) |
+| DNS | Cloudflare — domain registered at domains.co.za |
+| Email | Resend, via a Supabase Edge Function |
 
 ---
 
@@ -178,25 +180,53 @@ src/
 
 ---
 
-## Deployment (Netlify)
+## Deployment (Cloudflare)
 
-1. Push to GitHub
-2. Connect repo in Netlify → **New site from Git**
+The site deploys to Cloudflare Workers as a static-assets project. There is
+no Worker script — `wrangler.jsonc` points Cloudflare at the built `dist`
+output, with `not_found_handling: "single-page-application"` so React Router
+routes like `/cart` and `/admin/orders` survive a direct load or refresh.
+
+1. Push to GitHub (`woutervdm21/storm-and-rose`)
+2. Cloudflare dashboard → **Workers & Pages** → connect the repo
 3. Build settings:
    - Build command: `npm run build`
-   - Publish directory: `dist`
-4. Add environment variables in Netlify → Site Settings → Environment Variables:
+   - Deploy command: `npx wrangler deploy`
+4. Add environment variables in the project's build settings:
    - `VITE_SUPABASE_URL`
    - `VITE_SUPABASE_ANON_KEY`
-5. Add your custom domain under Domain Management
+
+   Vite inlines these at **build** time, so a build without them succeeds and
+   then fails at runtime with no data. The anon key is public by design —
+   row-level security is what protects the data.
+5. Attach the custom domain under **Custom domains**. Cloudflare writes the
+   DNS records itself, so do not add A or CNAME records by hand.
 
 > Every push to `main` triggers an automatic redeploy.
+
+### DNS
+
+`stormandrose.co.za` is registered at domains.co.za with DNS delegated to
+Cloudflare — the nameservers at the registrar must point at the pair shown on
+the zone's Overview page.
+
+### Order notification email
+
+`supabase/functions/order-notification/` emails the shop when an order is
+placed, triggered by `on_order_created` on the `orders` table. See that
+folder's README for the secrets and deploy steps.
 
 ---
 
 ## Before Going Live
 
 - [ ] Update EFT banking details in `src/pages/OrderConfirmation.jsx`
-- [ ] Update `SITE_URL` in `src/components/Meta.jsx` to your actual domain
 - [ ] Update `sitemap.xml` in `public/` with live product URLs
 - [ ] Set your site URL in Supabase → Authentication → URL Configuration
+- [ ] Point the registrar's nameservers at Cloudflare and wait for the zone
+      to go Active
+- [ ] Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to the Cloudflare
+      build settings
+- [ ] Set `RESEND_API_KEY` so order notification emails actually send
+
+`SITE_URL` in `src/components/Meta.jsx` is already `https://stormandrose.co.za`.
