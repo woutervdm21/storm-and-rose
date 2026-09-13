@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project
 
-Storm & Rose — luxury candle store MVP ("A Storm of Faith venture"). Customers browse products, add to cart, and place orders paid via EFT. Admins manage products and order statuses.
+Storm & Rose — luxury candle store MVP ("A Storm of Faith venture"). Customers browse products, add to cart, and pay by card (Yoco) or EFT. Admins manage products and order statuses.
 
 Tagline: *Luxury Candles & Thoughtful Designs, Handcrafted with Love*
 
@@ -20,6 +20,7 @@ Tagline: *Luxury Candles & Thoughtful Designs, Handcrafted with Love*
 npm run dev       # start Vite dev server
 npm run build     # production build
 npm run preview   # preview production build locally
+npm run test:yoco # signature + amount checks for the payment flow (no network)
 ```
 
 ## Brand & Design
@@ -60,14 +61,21 @@ src/
 - **Cart** is React Context backed by `localStorage`. No external state library.
 - **Auth**: Supabase Auth (email/password). Admin routes check authenticated session + `admin` role.
 - **Images**: stored in Supabase Storage; URL stored on the product row.
-- **Payments**: manual EFT only. Orders created with `pending_payment`; admin updates to `paid` or `shipped`.
+- **Payments**: card via the Yoco gateway, or manual EFT. Orders are created
+  `pending_payment`. A card order is marked `paid` by the `yoco-webhook` Edge
+  Function and **only** by it — never from the browser's return from Yoco,
+  which anyone can trigger. An EFT order is marked `paid` by an admin. See
+  README → "Card payments (Yoco)".
+- **Money is never computed in the browser.** `anon` may insert any
+  `order_items.unit_price` it likes, so the amount charged is recomputed from
+  `products.price` server-side. If you touch pricing, that rule holds.
 
 ### Database Tables
 
 | Table | Key columns |
 |-------|-------------|
 | `products` | id, name, description, price, image_url, stock |
-| `orders` | id, customer_name, customer_email, status, created_at |
+| `orders` | id, customer_name, customer_email, status, created_at, payment_method, amount_cents, yoco_checkout_id, yoco_payment_id, paid_at |
 | `order_items` | id, order_id, product_id, quantity, unit_price |
 
 Order status flow: `pending_payment` → `paid` → `shipped`
@@ -88,5 +96,6 @@ Shared component classes (`input-field`, `btn-primary`, `btn-secondary`) are def
 - Build only what the current feature needs — no speculative abstractions.
 - No global state libraries (Zustand, Redux, etc.).
 - No custom API layer — use the Supabase client directly in components/hooks.
-- No real-time subscriptions, background workers, or payment gateways.
+- No real-time subscriptions or background workers.
+- One payment gateway (Yoco), added deliberately. Not a second one.
 - Prefer plain React state and context over any additional tooling.
