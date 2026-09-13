@@ -81,7 +81,7 @@ export default function Checkout() {
     const order = {
       id:               crypto.randomUUID(),
       customer_name:    form.name,
-      customer_email:   form.email || null,
+      customer_email:   form.email,
       customer_phone:   form.phone,
       status:           'pending_payment',
       payment_method:   payment === 'card' ? 'yoco' : 'eft',
@@ -188,8 +188,11 @@ export default function Checkout() {
           <Field label="Full Name">
             <input name="name" required value={form.name} onChange={handleChange} className="input-field" />
           </Field>
-          <Field label="Email Address (optional)">
-            <input name="email" type="email" value={form.email} onChange={handleChange} className="input-field" />
+          <Field label="Email Address">
+            <input name="email" type="email" required value={form.email} onChange={handleChange} className="input-field" />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Your order confirmation and payment receipt go here.
+            </p>
           </Field>
           <Field label="Cellphone Number">
             <input name="phone" type="tel" required value={form.phone} onChange={handleChange} className="input-field" placeholder="072 326 4837" />
