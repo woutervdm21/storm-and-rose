@@ -246,6 +246,10 @@ re-reads `products.price` and adds the courier fee from
 checkout's `metadata` and comes back in `payload.metadata.order_id`. Without it
 a payment cannot be matched to an order.
 
+The signature check and the amount calculation are both pure modules under
+`supabase/functions/_shared/`, covered by `npm run test:yoco`. That suite needs
+neither Yoco nor Supabase, so run it after touching either.
+
 #### Setting it up
 
 1. Apply `sql/005_yoco_payments.sql` in the Supabase SQL editor.

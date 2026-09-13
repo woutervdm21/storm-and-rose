@@ -12,63 +12,21 @@
 //   YOCO_WEBHOOK_SECRET — the whsec_… returned when the webhook was registered
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-
-// Yoco retries a failed delivery, and a replayed old event should not be
-// accepted, so anything older than this is refused.
-const TOLERANCE_SECONDS = 3 * 60
-
-// compare without leaking how many bytes matched
-function timingSafeEqual(a: Uint8Array, b: Uint8Array): boolean {
-  if (a.length !== b.length) return false
-  let diff = 0
-  for (let i = 0; i < a.length; i++) diff |= a[i] ^ b[i]
-  return diff === 0
-}
-
-const b64decode = (s: string) => Uint8Array.from(atob(s), c => c.charCodeAt(0))
-const b64encode = (b: ArrayBuffer) => btoa(String.fromCharCode(...new Uint8Array(b)))
-
-async function signatureIsValid(req: Request, rawBody: string): Promise<boolean> {
-  const id        = req.headers.get('webhook-id')
-  const timestamp = req.headers.get('webhook-timestamp')
-  const header    = req.headers.get('webhook-signature')
-  const secret    = Deno.env.get('YOCO_WEBHOOK_SECRET')
-
-  if (!id || !timestamp || !header || !secret) return false
-
-  const age = Math.abs(Math.floor(Date.now() / 1000) - Number(timestamp))
-  if (!Number.isFinite(age) || age > TOLERANCE_SECONDS) {
-    console.error('Webhook rejected: timestamp outside tolerance', timestamp)
-    return false
-  }
-
-  // the raw body, byte for byte — re-serialising parsed JSON changes the hash
-  const signedContent = `${id}.${timestamp}.${rawBody}`
-
-  const key = await crypto.subtle.importKey(
-    'raw',
-    b64decode(secret.replace(/^whsec_/, '')),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  )
-  const expected = b64encode(
-    await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(signedContent)),
-  )
-
-  // header looks like "v1,<signature>", and may carry several space-separated
-  // signatures while a secret is being rotated — any one matching is enough
-  const encoder = new TextEncoder()
-  return header.split(' ').some((part) => {
-    const sig = part.includes(',') ? part.split(',')[1] : part
-    return timingSafeEqual(encoder.encode(sig), encoder.encode(expected))
-  })
-}
+import { verifyWebhookSignature } from '../_shared/yoco-signature.ts'
 
 Deno.serve(async (req) => {
   const rawBody = await req.text()
 
-  if (!await signatureIsValid(req, rawBody)) {
+  const verified = await verifyWebhookSignature({
+    id:              req.headers.get('webhook-id'),
+    timestamp:       req.headers.get('webhook-timestamp'),
+    signatureHeader: req.headers.get('webhook-signature'),
+    body:            rawBody,
+    secret:          Deno.env.get('YOCO_WEBHOOK_SECRET'),
+  })
+
+  if (!verified.ok) {
+    console.error('Webhook rejected:', verified.reason)
     return new Response('Invalid signature', { status: 401 })
   }
 
@@ -120,8 +78,8 @@ Deno.serve(async (req) => {
   const { error } = await supabase
     .from('orders')
     .update({
-      status:         'paid',
-      paid_at:        new Date().toISOString(),
+      status:          'paid',
+      paid_at:         new Date().toISOString(),
       yoco_payment_id: event.payload.id,
     })
     .eq('id', orderId)

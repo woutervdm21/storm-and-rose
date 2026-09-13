@@ -15,7 +15,7 @@
 //   SITE_URL        — https://stormandrose.co.za (no trailing slash)
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
-import { fulfillmentFor } from '../_shared/fulfillment.ts'
+import { orderTotalCents } from '../_shared/order-total.ts'
 
 const YOCO_CHECKOUTS_URL = 'https://payments.yoco.com/api/checkouts'
 
@@ -62,16 +62,14 @@ Deno.serve(async (req) => {
   if (itemsError || !lines?.length) return json({ error: 'Order has no items' }, 400)
 
   // prices come from `products`, never from the submitted order_items
-  const subtotal = lines.reduce(
-    (sum, l) => sum + Number(l.products?.price ?? 0) * Number(l.quantity),
-    0,
-  )
-  const total = subtotal + fulfillmentFor(order.fulfillment).fee
-  const amountInCents = Math.round(total * 100)
+  const total = orderTotalCents(lines, order.fulfillment)
 
-  if (!Number.isFinite(amountInCents) || amountInCents < 100) {
+  if (!total.ok) {
+    console.error('Refusing to charge for order', order.id, '-', total.reason)
     return json({ error: 'Order total is not payable' }, 400)
   }
+
+  const amountInCents = total.cents
 
   // the short code the customer already sees as their EFT reference
   const reference = String(order.id).slice(0, 8).toUpperCase()
