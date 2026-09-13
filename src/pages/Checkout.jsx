@@ -41,6 +41,9 @@ export default function Checkout() {
   const [form, setForm]           = useState(EMPTY_FORM)
   const [payment, setPayment]     = useState('card')
   const [submitting, setSubmitting] = useState(false)
+  // set while the browser is on its way to Yoco — the cart is already empty by
+  // then, and the empty-cart notice must not flash up in the gap
+  const [redirecting, setRedirecting] = useState(false)
   const [error, setError]         = useState(null)
 
   // top-level choice: a collection point, or 'courier' which then asks which
@@ -139,6 +142,7 @@ export default function Checkout() {
         return
       }
 
+      setRedirecting(true)
       clearCart()
       window.location.href = data.redirectUrl
       return
@@ -148,6 +152,23 @@ export default function Checkout() {
     toast.success('Order placed successfully!')
     clearCart()
     navigate('/order-confirmation', { state: { order, total: grandTotal } })
+  }
+
+  // checked before the empty-cart guard, because clearing the cart is what puts
+  // us here — the browser is mid-navigation to Yoco
+  if (redirecting) {
+    return (
+      <main className="max-w-lg mx-auto px-4 py-16 text-center">
+        <Meta title="Taking you to payment" noIndex />
+        <h1 className="font-serif text-2xl text-rose-deep dark:text-rose-dust mb-3">
+          Taking you to secure payment…
+        </h1>
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          Your order is saved. If this page does not move on its own, check your
+          connection and try again from your order confirmation.
+        </p>
+      </main>
+    )
   }
 
   if (items.length === 0) {
