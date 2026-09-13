@@ -50,8 +50,19 @@ export type Order = {
   shipping_postal?: string | null
 }
 
-const ROSE = '#6D2E46'
-const RULE = '#e8dde0'
+const ROSE     = '#6D2E46'
+const ROSE_MID = '#B5607A'
+const RULE     = '#e8dde0'
+const CREAM    = '#F5F3F1'
+const BLUSH    = '#fdf6f7'
+
+// The logo is loaded from the live site. An email client cannot read a local
+// path, and attaching the file would hang a paperclip on every order. If the
+// domain ever moves, this URL moves with it.
+const LOGO_URL = 'https://stormandrose.co.za/images/Logo1.png'
+const SITE_URL = 'https://stormandrose.co.za'
+
+const SERIF = "Georgia,'Times New Roman',serif"
 
 export const money = (n: number) => `R ${Number(n).toFixed(2)}`
 
@@ -105,18 +116,50 @@ export function summarise(order: Order, lines: OrderLine[]) {
   }
 }
 
+// The frame every email shares: brand header, the message, then a footer.
+//
+// Built from tables with inline styles because that is all Outlook reliably
+// renders — no flexbox, no stylesheet, no layout it has to be trusted with.
+//
 // The charset is declared explicitly: these emails carry en dashes, × and ·,
-// and a client left to guess renders them as mojibake.
+// and a client left to guess renders them as mojibake. color-scheme stops a
+// client's dark mode from inverting the brand colours into something muddy.
 const shell = (inner: string) =>
   `<meta charset="utf-8">
-   <div style="font-family:system-ui,sans-serif;max-width:520px;color:#1A1A2E">${inner}</div>`
+<meta name="color-scheme" content="light only">
+<meta name="supported-color-schemes" content="light only">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"
+       style="background:${CREAM};padding:24px 12px;font-family:system-ui,-apple-system,'Segoe UI',sans-serif">
+  <tr><td align="center">
+    <table role="presentation" width="560" cellpadding="0" cellspacing="0" border="0"
+           style="width:100%;max-width:560px;background:#ffffff;border:1px solid ${RULE};border-radius:14px">
+
+      <tr><td align="center" style="background:${BLUSH};padding:22px 24px 22px;border-bottom:1px solid ${RULE};border-radius:14px 14px 0 0">
+        <img src="${LOGO_URL}" width="96" height="96" alt="Storm &amp; Rose"
+             style="display:block;width:96px;height:96px;border:0;margin:0 auto 2px">
+        <div style="font-family:${SERIF};font-size:19px;letter-spacing:3px;color:${ROSE}">STORM &amp; ROSE</div>
+        <div style="font-size:11px;letter-spacing:1.5px;text-transform:uppercase;color:${ROSE_MID};margin-top:7px">
+          Luxury Candles &amp; Thoughtful Designs
+        </div>
+      </td></tr>
+
+      <tr><td style="padding:26px 28px;color:#1A1A2E;font-size:14px;line-height:1.55">${inner}</td></tr>
+
+      <tr><td align="center" style="background:${BLUSH};padding:18px 24px;border-top:1px solid ${RULE};border-radius:0 0 14px 14px;font-size:12px;color:#8a5a68;line-height:1.7">
+        <strong style="font-family:${SERIF};color:${ROSE}">Storm &amp; Rose</strong> — Handcrafted with Love<br>
+        <a href="${SITE_URL}" style="color:${ROSE_MID};text-decoration:none">stormandrose.co.za</a>
+      </td></tr>
+
+    </table>
+  </td></tr>
+</table>`
 
 // where the order is going, in the customer's words rather than ours
 function fulfillmentBlock(order: Order): string {
   const collection = COLLECTION_ADDRESS[order.fulfillment]
   if (collection) {
     return `
-      <h3 style="color:${ROSE};margin-bottom:4px">Collection</h3>
+      <h3 style="font-family:${SERIF};font-size:15px;color:${ROSE};margin:22px 0 4px">Collection</h3>
       <p style="margin-top:0">
         ${collection.join('<br>')}<br>
         <span style="color:#666">We'll contact you when your order is ready to collect.</span>
@@ -125,7 +168,7 @@ function fulfillmentBlock(order: Order): string {
 
   const { method, address } = summarise(order, [])
   return `
-    <h3 style="color:${ROSE};margin-bottom:4px">Delivery</h3>
+    <h3 style="font-family:${SERIF};font-size:15px;color:${ROSE};margin:22px 0 4px">Delivery</h3>
     <p style="margin-top:0">
       ${method.label}${address ? `<br>${address}` : ''}
     </p>`
@@ -143,7 +186,7 @@ export function shopNotificationEmail(order: Order, lines: OrderLine[]) {
   return {
     subject: `New order ${reference} — ${order.customer_name} — ${money(total)}${payingByCard ? ' (card)' : ''}`,
     html: shell(`
-      <h2 style="color:${ROSE};margin-bottom:4px">New order ${reference}</h2>
+      <h2 style="font-family:${SERIF};font-size:20px;color:${ROSE};margin:0 0 6px">New order ${reference}</h2>
       <p style="color:#666;margin-top:0;font-size:13px">
         ${payingByCard
           ? 'Paying by <strong>card</strong> — this mail goes out when the order is placed, ' +
@@ -152,17 +195,17 @@ export function shopNotificationEmail(order: Order, lines: OrderLine[]) {
         <span style="color:#999">${order.id}</span>
       </p>
 
-      <h3 style="color:${ROSE};margin-bottom:4px">Customer</h3>
+      <h3 style="font-family:${SERIF};font-size:15px;color:${ROSE};margin:22px 0 4px">Customer</h3>
       <p style="margin-top:0">
         ${order.customer_name}<br>
         ${order.customer_phone ?? ''}<br>
         ${order.customer_email ?? 'no email given'}
       </p>
 
-      <h3 style="color:${ROSE};margin-bottom:4px">Fulfillment</h3>
+      <h3 style="font-family:${SERIF};font-size:15px;color:${ROSE};margin:22px 0 4px">Fulfillment</h3>
       <p style="margin-top:0">${method.label}${address ? `<br>${address}` : ''}</p>
 
-      <h3 style="color:${ROSE};margin-bottom:4px">Items</h3>
+      <h3 style="font-family:${SERIF};font-size:15px;color:${ROSE};margin:22px 0 4px">Items</h3>
       ${itemsTable}`),
   }
 }
@@ -175,14 +218,14 @@ export function customerEftEmail(order: Order, lines: OrderLine[]) {
   return {
     subject: `Your Storm & Rose order ${reference}`,
     html: shell(`
-      <h2 style="color:${ROSE};margin-bottom:4px">Thank you, ${order.customer_name.split(' ')[0]}!</h2>
+      <h2 style="font-family:${SERIF};font-size:20px;color:${ROSE};margin:0 0 6px">Thank you, ${order.customer_name.split(' ')[0]}!</h2>
       <p style="margin-top:0">
         We have your order ${reference}. To complete it, please pay
         <strong>${money(total)}</strong> by EFT using the details below.
       </p>
 
       <div style="background:#fdf6f7;border:1px solid ${RULE};border-radius:10px;padding:16px;margin:16px 0">
-        <h3 style="color:${ROSE};margin:0 0 10px">EFT payment details</h3>
+        <h3 style="font-family:${SERIF};font-size:15px;color:${ROSE};margin:0 0 10px">EFT payment details</h3>
         <table style="width:100%;border-collapse:collapse;font-size:14px">
           <tr><td style="padding:3px 0;color:#666">Bank</td><td style="padding:3px 0;text-align:right">${EFT.bank}</td></tr>
           <tr><td style="padding:3px 0;color:#666">Account name</td><td style="padding:3px 0;text-align:right">${EFT.name}</td></tr>
@@ -199,14 +242,13 @@ export function customerEftEmail(order: Order, lines: OrderLine[]) {
         payment to your order. Orders are only sent once payment reflects in our account.
       </p>
 
-      <h3 style="color:${ROSE};margin-bottom:4px">Your order</h3>
+      <h3 style="font-family:${SERIF};font-size:15px;color:${ROSE};margin:22px 0 4px">Your order</h3>
       ${itemsTable}
 
       ${fulfillmentBlock(order)}
 
-      <p style="color:#666;font-size:13px;margin-top:24px">
-        Reply to this email if anything looks wrong.<br>
-        <strong style="color:${ROSE}">Storm &amp; Rose</strong> — Luxury Candles &amp; Thoughtful Designs
+      <p style="color:#666;font-size:13px;margin:24px 0 0">
+        Reply to this email if anything looks wrong.
       </p>`),
   }
 }
@@ -217,7 +259,7 @@ export function customerPaidEmail(order: Order, lines: OrderLine[]) {
   return {
     subject: `Payment received — Storm & Rose order ${reference}`,
     html: shell(`
-      <h2 style="color:${ROSE};margin-bottom:4px">Thank you, ${order.customer_name.split(' ')[0]}!</h2>
+      <h2 style="font-family:${SERIF};font-size:20px;color:${ROSE};margin:0 0 6px">Thank you, ${order.customer_name.split(' ')[0]}!</h2>
       <p style="margin-top:0">
         We've received your payment of <strong>${money(total)}</strong> for order
         <strong>${reference}</strong>. Nothing further is needed from you.
@@ -228,14 +270,13 @@ export function customerPaidEmail(order: Order, lines: OrderLine[]) {
         <span style="color:#4a7a62">— we're getting your order ready now.</span>
       </div>
 
-      <h3 style="color:${ROSE};margin-bottom:4px">Your order</h3>
+      <h3 style="font-family:${SERIF};font-size:15px;color:${ROSE};margin:22px 0 4px">Your order</h3>
       ${itemsTable}
 
       ${fulfillmentBlock(order)}
 
-      <p style="color:#666;font-size:13px;margin-top:24px">
-        Keep this email as your receipt. Reply to it if anything looks wrong.<br>
-        <strong style="color:${ROSE}">Storm &amp; Rose</strong> — Luxury Candles &amp; Thoughtful Designs
+      <p style="color:#666;font-size:13px;margin:24px 0 0">
+        Keep this email as your receipt. Reply to it if anything looks wrong.
       </p>`),
   }
 }

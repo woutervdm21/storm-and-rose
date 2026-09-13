@@ -104,6 +104,21 @@ check('a one-word name does not break the greeting', () => {
   assert.ok(html.includes('Thank you, Candice!'), 'greeting missing')
 })
 
+check('every email is framed with the logo and the footer', () => {
+  // the logo has to be an absolute URL — a mail client cannot resolve a path
+  const all = [
+    customerEftEmail(collectionOrder, LINES),
+    customerPaidEmail(deliveryOrder, LINES),
+    shopNotificationEmail(deliveryOrder, LINES),
+  ]
+  for (const { html } of all) {
+    assert.match(html, /<img src="https:\/\/stormandrose\.co\.za\/images\/Logo1\.png"/, 'logo missing')
+    assert.ok(html.includes('alt="Storm &amp; Rose"'), 'logo needs alt text for blocked images')
+    assert.ok(html.includes('stormandrose.co.za</a>'), 'footer link missing')
+    assert.ok(!/<img[^>]+src="\//.test(html), 'relative image path will not load in email')
+  }
+})
+
 check('an order with no items still renders', () => {
   const { html } = customerEftEmail(collectionOrder, [])
   assert.ok(html.includes(money(0)), 'empty order should total zero')
