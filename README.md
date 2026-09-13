@@ -221,6 +221,77 @@ the zone's Overview page.
 placed, triggered by `on_order_created` on the `orders` table. See that
 folder's README for the secrets and deploy steps.
 
+### Card payments (Yoco)
+
+Cards go through the Yoco gateway as a redirect checkout. Three functions and
+one rule: **only `yoco-webhook` may mark an order paid.** The customer coming
+back to `successUrl` proves nothing — anyone can open that link.
+
+```
+Checkout.jsx  ──▶ order row (pending_payment)
+              ──▶ yoco-create-checkout ──▶ POST payments.yoco.com/api/checkouts
+              ◀── redirectUrl              (amount worked out server-side)
+              ──▶ Yoco's card page
+Yoco          ──▶ yoco-webhook (payment.succeeded) ──▶ status = 'paid'
+customer      ──▶ /order-confirmation?order=…&payment=success
+                  └─ polls order-status until the webhook lands
+```
+
+The amount is never taken from the browser. `anon` can insert any
+`order_items.unit_price` it likes (see `sql/004`), so `yoco-create-checkout`
+re-reads `products.price` and adds the courier fee from
+`supabase/functions/_shared/fulfillment.ts`.
+
+`payment.succeeded` carries **no checkout id**, so the order id travels in the
+checkout's `metadata` and comes back in `payload.metadata.order_id`. Without it
+a payment cannot be matched to an order.
+
+#### Setting it up
+
+1. Apply `sql/005_yoco_payments.sql` in the Supabase SQL editor.
+
+2. Get the **test** secret key from the Yoco dashboard (`sk_test_…`) and set it,
+   along with the site URL used for the return links:
+
+   ```
+   npx supabase secrets set --project-ref enpyghydpklvuhaicwrr \
+     YOCO_SECRET_KEY=sk_test_... SITE_URL=https://stormandrose.co.za
+   ```
+
+3. Deploy the functions. The webhook has no Supabase token, so it must skip JWT
+   verification:
+
+   ```
+   npx supabase functions deploy yoco-create-checkout
+   npx supabase functions deploy order-status
+   npx supabase functions deploy yoco-webhook --no-verify-jwt
+   ```
+
+4. Register the webhook and store the secret it returns — it is shown once:
+
+   ```
+   $env:YOCO_SECRET_KEY = 'sk_test_...'
+   node scripts/register-yoco-webhook.mjs register \
+     https://enpyghydpklvuhaicwrr.supabase.co/functions/v1/yoco-webhook
+   npx supabase secrets set --project-ref enpyghydpklvuhaicwrr YOCO_WEBHOOK_SECRET=whsec_...
+   ```
+
+5. Place an order with a Yoco test card. The order should reach **Paid** in
+   `/admin/orders` within a few seconds. `npx supabase functions logs yoco-webhook`
+   shows the verification result if it does not.
+
+#### Going live
+
+Swap `YOCO_SECRET_KEY` for the `sk_live_…` key, register the webhook again with
+that key (live and test webhooks are separate), and set the new
+`YOCO_WEBHOOK_SECRET`. Nothing else changes.
+
+#### Not done yet
+
+- Refunds are ignored. `yoco-webhook` acknowledges and logs `refund.succeeded`
+  but leaves the order alone — a refunded order still reads **Paid** in admin.
+- Stock is still only deducted on **Shipped**, so a paid order is not reserved.
+
 ---
 
 ## Before Going Live
@@ -233,5 +304,6 @@ folder's README for the secrets and deploy steps.
 - [ ] Add `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` to the Cloudflare
       build settings
 - [ ] Set `RESEND_API_KEY` so order notification emails actually send
+- [ ] Swap the Yoco test key for the live one, and re-register the webhook
 
 `SITE_URL` in `src/components/Meta.jsx` is already `https://stormandrose.co.za`.

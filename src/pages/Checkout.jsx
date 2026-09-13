@@ -12,6 +12,19 @@ const SA_PROVINCES = [
   'Limpopo', 'Mpumalanga', 'Northern Cape', 'North West', 'Western Cape',
 ]
 
+const PAYMENT_METHODS = [
+  {
+    value: 'card',
+    label: 'Card — pay now',
+    blurb: 'Secure card payment through Yoco. Your order is confirmed immediately.',
+  },
+  {
+    value: 'eft',
+    label: 'EFT — pay by bank transfer',
+    blurb: "We'll show you our banking details. Orders ship once payment reflects.",
+  },
+]
+
 const EMPTY_FORM = {
   name: '', email: '', phone: '',
   fulfillment: '',
@@ -24,6 +37,7 @@ export default function Checkout() {
   const navigate = useNavigate()
 
   const [form, setForm]           = useState(EMPTY_FORM)
+  const [payment, setPayment]     = useState('card')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError]         = useState(null)
 
@@ -65,6 +79,7 @@ export default function Checkout() {
       customer_email:   form.email || null,
       customer_phone:   form.phone,
       status:           'pending_payment',
+      payment_method:   payment === 'card' ? 'yoco' : 'eft',
       fulfillment:      form.fulfillment,
       shipping_line1:   toAddress ? form.shipping_line1 : null,
       shipping_line2:   toAddress ? (form.shipping_line2 || null) : null,
@@ -102,6 +117,28 @@ export default function Checkout() {
       toast.error('Order created but items failed to save. Please contact us.')
       setError('Order created but items failed to save. Please contact us.')
       setSubmitting(false)
+      return
+    }
+
+    // card payments hand off to Yoco. The order stays pending_payment until
+    // the yoco-webhook function confirms it — this redirect is not proof of
+    // anything, it just takes the customer to the card form.
+    if (payment === 'card') {
+      const { data, error: payError } = await supabase.functions.invoke(
+        'yoco-create-checkout', { body: { order_id: order.id } },
+      )
+
+      if (payError || !data?.redirectUrl) {
+        // the order is already saved, so fall back to EFT rather than lose it
+        console.error('Could not create Yoco checkout', payError, data)
+        toast.error('Card payment is unavailable right now — please pay by EFT.')
+        clearCart()
+        navigate('/order-confirmation', { state: { order, total: grandTotal } })
+        return
+      }
+
+      clearCart()
+      window.location.href = data.redirectUrl
       return
     }
 
@@ -239,6 +276,31 @@ export default function Checkout() {
         </section>
         )}
 
+        {/* payment method */}
+        <section className="flex flex-col gap-3">
+          <h2 className="font-serif text-lg text-rose-deep dark:text-rose-dust">Payment</h2>
+          {PAYMENT_METHODS.map(method => (
+            <label
+              key={method.value}
+              className={`cursor-pointer rounded-lg border px-4 py-3 text-sm transition-colors
+                          ${payment === method.value
+                            ? 'border-rose-deep bg-rose-dust/15 text-rose-deep dark:text-rose-dust'
+                            : 'border-rose-dust/40 hover:bg-rose-dust/10'}`}
+            >
+              <input
+                type="radio"
+                name="payment"
+                value={method.value}
+                checked={payment === method.value}
+                onChange={(e) => setPayment(e.target.value)}
+                className="sr-only"
+              />
+              <span className="font-semibold block">{method.label}</span>
+              <span className="text-xs font-normal text-gray-600 dark:text-gray-400">{method.blurb}</span>
+            </label>
+          ))}
+        </section>
+
         {/* order summary */}
         <div className="border border-rose-dust/30 rounded-lg p-4 text-sm space-y-1">
           {items.map(item => (
@@ -266,7 +328,9 @@ export default function Checkout() {
           disabled={submitting}
           className="btn-primary py-3"
         >
-          {submitting ? 'Placing Order...' : 'Place Order'}
+          {submitting
+            ? 'Placing Order...'
+            : payment === 'card' ? `Pay R ${grandTotal.toFixed(2)}` : 'Place Order'}
         </button>
       </form>
     </main>

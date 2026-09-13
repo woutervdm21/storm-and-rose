@@ -135,6 +135,15 @@ export default function AdminOrders() {
                   }`}>
                     {fulfillmentInfo(order.fulfillment).short}
                   </p>
+                  {/* how they paid — a card order that says Paid was confirmed by
+                      Yoco's webhook, an EFT one by somebody checking the bank */}
+                  <p className={`text-xs font-semibold mt-1 ml-2 inline-block px-2 py-0.5 rounded-full ${
+                    order.payment_method === 'yoco'
+                      ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                      : 'bg-gray-100 text-gray-600 dark:bg-gray-500/15 dark:text-gray-300'
+                  }`}>
+                    {order.payment_method === 'yoco' ? 'Card · Yoco' : 'EFT'}
+                  </p>
                   {order.shipping_line1 && (
                     <p className="text-sm text-gray-500 mt-1">
                       {order.shipping_line1}{order.shipping_line2 ? `, ${order.shipping_line2}` : ''}, {order.shipping_city}, {order.shipping_province} {order.shipping_postal}
