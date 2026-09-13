@@ -6,6 +6,12 @@
 //
 //   node scripts/register-yoco-webhook.mjs list
 //   node scripts/register-yoco-webhook.mjs register <functions-url>/yoco-webhook
+//   node scripts/register-yoco-webhook.mjs delete <subscription-id>
+//
+// Registering twice leaves two subscriptions on the same url, each with its
+// own secret, and only one of them can be the one in YOCO_WEBHOOK_SECRET —
+// the other's deliveries fail the signature check. Yoco has no screen for
+// this, so `delete` is how a duplicate goes away.
 //
 // Reads the key from YOCO_SECRET_KEY:
 //   PowerShell:  $env:YOCO_SECRET_KEY = 'sk_test_...'
@@ -34,8 +40,22 @@ if (command === 'list') {
   process.exit(res.ok ? 0 : 1)
 }
 
+// `url` is the subscription id here — same slot, different meaning
+if (command === 'delete') {
+  if (!url) {
+    console.error('Usage: register-yoco-webhook.mjs delete <subscription-id>')
+    process.exit(1)
+  }
+  const res = await fetch(`${API}/${url}`, { method: 'DELETE', headers })
+  const text = await res.text()
+  console.log(res.status, text || '(no body)')
+  if (res.ok) console.log(`
+Deleted ${url}. Run \`list\` to confirm what is left.`)
+  process.exit(res.ok ? 0 : 1)
+}
+
 if (command !== 'register' || !url) {
-  console.error('Usage: register-yoco-webhook.mjs list | register <url>')
+  console.error('Usage: register-yoco-webhook.mjs list | register <url> | delete <id>')
   process.exit(1)
 }
 

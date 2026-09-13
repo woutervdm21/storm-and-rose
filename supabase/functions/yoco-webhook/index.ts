@@ -51,13 +51,27 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   )
 
-  const { data: order } = await supabase
+  // Every column, deliberately. Naming them means a column the receipt wants
+  // but the table does not have fails the whole select, and a failed select
+  // is indistinguishable from an order that isn't there — a payment then
+  // looks like a stranger's and is never marked paid. The email builders
+  // already cope with a field being absent.
+  // maybeSingle, not single: single() calls "no such row" an error, which
+  // would send a genuinely unknown order down the retry path below and have
+  // Yoco redeliver it forever. Here a missing row is data: null, and only a
+  // real query failure sets the error.
+  const { data: order, error: lookupError } = await supabase
     .from('orders')
-    .select('id, status, amount_cents, customer_name, customer_email, customer_phone, ' +
-            'fulfillment, payment_method, shipping_line1, shipping_line2, ' +
-            'shipping_city, shipping_province, shipping_postal')
+    .select('*')
     .eq('id', orderId)
-    .single()
+    .maybeSingle()
+
+  // A failed query is not a missing order. Yoco must retry this one, so it
+  // answers 500 rather than swallowing a real payment.
+  if (lookupError) {
+    console.error('Order lookup failed', orderId, event.id, lookupError.message)
+    return new Response('Lookup failed', { status: 500 })
+  }
 
   if (!order) {
     console.error('payment.succeeded for unknown order', orderId, event.id)
