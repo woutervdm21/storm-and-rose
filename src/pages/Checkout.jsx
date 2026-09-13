@@ -15,11 +15,13 @@ const SA_PROVINCES = [
 const PAYMENT_METHODS = [
   {
     value: 'card',
+    icon:  CardIcon,
     label: 'Card — pay now',
     blurb: 'Secure card payment through Yoco. Your order is confirmed immediately.',
   },
   {
     value: 'eft',
+    icon:  BankIcon,
     label: 'EFT — pay by bank transfer',
     blurb: "We'll show you our banking details. Orders ship once payment reflects.",
   },
@@ -279,26 +281,35 @@ export default function Checkout() {
         {/* payment method */}
         <section className="flex flex-col gap-3">
           <h2 className="font-serif text-lg text-rose-deep dark:text-rose-dust">Payment</h2>
-          {PAYMENT_METHODS.map(method => (
-            <label
-              key={method.value}
-              className={`cursor-pointer rounded-lg border px-4 py-3 text-sm transition-colors
-                          ${payment === method.value
-                            ? 'border-rose-deep bg-rose-dust/15 text-rose-deep dark:text-rose-dust'
-                            : 'border-rose-dust/40 hover:bg-rose-dust/10'}`}
-            >
-              <input
-                type="radio"
-                name="payment"
-                value={method.value}
-                checked={payment === method.value}
-                onChange={(e) => setPayment(e.target.value)}
-                className="sr-only"
-              />
-              <span className="font-semibold block">{method.label}</span>
-              <span className="text-xs font-normal text-gray-600 dark:text-gray-400">{method.blurb}</span>
-            </label>
-          ))}
+          {PAYMENT_METHODS.map(method => {
+            const Icon     = method.icon
+            const selected = payment === method.value
+            return (
+              <label
+                key={method.value}
+                className={`cursor-pointer rounded-lg border px-4 py-3 text-sm flex items-center gap-4 transition-colors
+                            ${selected
+                              ? 'border-rose-deep bg-rose-dust/15 text-rose-deep dark:text-rose-dust'
+                              : 'border-rose-dust/40 hover:bg-rose-dust/10'}`}
+              >
+                <input
+                  type="radio"
+                  name="payment"
+                  value={method.value}
+                  checked={selected}
+                  onChange={(e) => setPayment(e.target.value)}
+                  className="sr-only"
+                />
+                {/* the icon carries the selected tint; unselected sits back a shade */}
+                <Icon className={`w-7 h-7 shrink-0 transition-colors
+                                  ${selected ? 'text-rose-deep dark:text-rose-dust' : 'text-rose-mid/60'}`} />
+                <span className="min-w-0">
+                  <span className="font-semibold block">{method.label}</span>
+                  <span className="text-xs font-normal text-gray-600 dark:text-gray-400">{method.blurb}</span>
+                </span>
+              </label>
+            )
+          })}
         </section>
 
         {/* order summary */}
@@ -334,6 +345,37 @@ export default function Checkout() {
         </button>
       </form>
     </main>
+  )
+}
+
+// Payment icons — drawn inline rather than pulled from an icon set, so they
+// inherit the brand colour and stay a single stroke weight with everything
+// else on the page. currentColor lets the label above tint them.
+
+function CardIcon({ className }) {
+  return (
+    <svg viewBox="0 0 32 24" fill="none" className={className} aria-hidden="true">
+      <rect x="1" y="1" width="30" height="22" rx="4"
+            stroke="currentColor" strokeWidth="1.5" />
+      {/* magnetic stripe */}
+      <path d="M1 8h30" stroke="currentColor" strokeWidth="1.5" />
+      {/* the two dots read as a card number without spelling one out */}
+      <path d="M6 16.5h5M14 16.5h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function BankIcon({ className }) {
+  return (
+    <svg viewBox="0 0 32 24" fill="none" className={className} aria-hidden="true">
+      {/* roof */}
+      <path d="M2.5 9 16 2l13.5 7" stroke="currentColor" strokeWidth="1.5"
+            strokeLinecap="round" strokeLinejoin="round" />
+      {/* columns */}
+      <path d="M7 12v7M13 12v7M19 12v7M25 12v7" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      {/* floor */}
+      <path d="M3.5 22h25" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
   )
 }
 
