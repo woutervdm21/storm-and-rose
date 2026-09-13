@@ -13,6 +13,7 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { verifyWebhookSignature } from '../_shared/yoco-signature.ts'
+import { customerPaidEmail, sendEmail } from '../_shared/order-email.ts'
 
 Deno.serve(async (req) => {
   const rawBody = await req.text()
@@ -52,7 +53,9 @@ Deno.serve(async (req) => {
 
   const { data: order } = await supabase
     .from('orders')
-    .select('id, status, amount_cents')
+    .select('id, status, amount_cents, customer_name, customer_email, customer_phone, ' +
+            'fulfillment, payment_method, shipping_line1, shipping_line2, ' +
+            'shipping_city, shipping_province, shipping_postal')
     .eq('id', orderId)
     .single()
 
@@ -75,7 +78,7 @@ Deno.serve(async (req) => {
   // Only an order still awaiting payment moves. Yoco retries on any non-2xx,
   // so this runs more than once for the same payment, and an order already
   // marked shipped must not be dragged back to paid.
-  const { error } = await supabase
+  const { data: updated, error } = await supabase
     .from('orders')
     .update({
       status:          'paid',
@@ -84,6 +87,7 @@ Deno.serve(async (req) => {
     })
     .eq('id', orderId)
     .eq('status', 'pending_payment')
+    .select('id')
 
   if (error) {
     // a real failure — let Yoco retry
@@ -91,6 +95,43 @@ Deno.serve(async (req) => {
     return new Response('Update failed', { status: 500 })
   }
 
+  // No row matched, so this is a retry of an event already handled, or the
+  // order has since moved on. Either way it is settled, and the customer has
+  // had their receipt — do not send a second one.
+  if (!updated?.length) {
+    console.log('Order already settled, nothing to do', orderId)
+    return new Response('ok')
+  }
+
   console.log('Order marked paid', orderId, event.payload.id)
+
+  // The receipt. This is the customer's proof of payment, so it is sent here
+  // rather than when the order was placed — at that point they had not paid.
+  if (order.customer_email) {
+    const { data: lines } = await supabase
+      .from('order_items')
+      .select('quantity, unit_price, variant, products(name)')
+      .eq('order_id', orderId)
+
+    const receipt = customerPaidEmail(order, lines ?? [])
+
+    const sent = await sendEmail({
+      to:             order.customer_email,
+      subject:        receipt.subject,
+      html:           receipt.html,
+      replyTo:        Deno.env.get('ORDER_EMAIL_TO'),
+      idempotencyKey: `order-paid-${orderId}`,
+    })
+
+    // Logged, not retried. The payment is recorded and the order is paid;
+    // making Yoco retry the whole event over a failed email would risk
+    // re-processing a settled payment for the sake of a resend.
+    if (!sent.ok) {
+      console.error('Receipt failed to send', orderId, sent.status, sent.body)
+    }
+  } else {
+    console.log('No customer email on order, receipt skipped', orderId)
+  }
+
   return new Response('ok')
 })

@@ -4,3 +4,6 @@ dist
 .env.local
 todo.txt
 supabase/.temp
+
+# rendered email previews from scripts/test-emails.mjs
+.preview/
