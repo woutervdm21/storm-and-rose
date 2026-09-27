@@ -36,6 +36,8 @@ const FILTERS = [
 export default function AdminOrders() {
   const [orders, setOrders] = useState([])
   const [filter, setFilter] = useState('active')
+  // booked this visit — kept on screen so the label can still be printed
+  const [justBooked, setJustBooked] = useState([])
 
   useEffect(() => { loadOrders() }, [])
 
@@ -82,7 +84,7 @@ export default function AdminOrders() {
 
   // apply active filter
   const visible = orders.filter(o => {
-    if (filter === 'active') return o.status === 'pending_payment' || o.status === 'paid'
+    if (filter === 'active') return o.status === 'pending_payment' || o.status === 'paid' || justBooked.includes(o.id)
     if (filter === 'all')    return true
     return o.status === filter
   })
@@ -204,7 +206,12 @@ export default function AdminOrders() {
 
               {/* courier booking — door-to-door and locker orders only */}
               {order.fulfillment?.startsWith('delivery') && (
-                <CourierPanel order={order} onChange={fields => patchOrder(order.id, fields)} />
+                <CourierPanel
+                  order={order}
+                  onChange={fields => patchOrder(order.id, fields)}
+                  // a booked parcel is on its way — same as clicking Shipped, stock included
+                  onBooked={() => { setJustBooked(prev => [...prev, order.id]); handleStatusChange(order, 'shipped') }}
+                />
               )}
             </div>
           )
@@ -216,7 +223,7 @@ export default function AdminOrders() {
 
 // Book The Courier Guy for one order: pick a box, see the real price, confirm.
 // Nothing is booked (or billed) until "Confirm booking" is clicked.
-function CourierPanel({ order, onChange }) {
+function CourierPanel({ order, onChange, onBooked }) {
   const [open, setOpen]       = useState(false)
   const [parcel, setParcel]   = useState(DEFAULT_PARCEL)
   const [from, setFrom]       = useState(DEFAULT_COLLECTION)
@@ -264,6 +271,7 @@ function CourierPanel({ order, onChange }) {
       courier_cost:         data.rate,
     })
     setOpen(false)
+    onBooked()
   }
 
   async function printLabel() {
