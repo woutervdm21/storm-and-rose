@@ -11,7 +11,7 @@ export const FULFILLMENT: Record<string, { label: string; fee: number }> = {
   collection_emalahleni: { label: 'Collection · Emalahleni',     fee: 0   },
   collection_middelburg: { label: 'Collection · Middelburg',     fee: 0   },
   delivery_door:         { label: 'Courier Guy · Door-to-Door',  fee: 140 },
-  delivery_locker:       { label: 'Courier Guy · Pudo Locker',   fee: 130 },
+  delivery_locker:       { label: 'Courier Guy · Pudo Locker',   fee: 80  },
   // legacy value, from orders placed before the two courier methods existed
   delivery:              { label: 'Delivery',                    fee: 100 },
 }

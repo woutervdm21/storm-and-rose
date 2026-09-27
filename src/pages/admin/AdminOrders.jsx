@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '../../lib/supabase'
 import { fulfillmentInfo, orderDeliveryFee } from '../../lib/fulfillment'
+import LockerPicker from '../../components/LockerPicker'
 import { courier, trackingUrl, statusLabel, PARCELS, DEFAULT_PARCEL, COLLECTION_POINTS, DEFAULT_COLLECTION } from '../../lib/courier'
 
 // visual config per status
@@ -249,32 +250,47 @@ function CourierPanel({ order, onChange, onBooked }) {
   const [open, setOpen]       = useState(false)
   const [parcel, setParcel]   = useState(DEFAULT_PARCEL)
   const [from, setFrom]       = useState(DEFAULT_COLLECTION)
+  // locker orders go Locker to Locker: the Pudo locker we drop the parcel at,
+  // remembered in this browser so it only has to be picked once
+  const [dropOff, setDropOff] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('dropOffLocker')) } catch { return null }
+  })
+  const isLocker = order.fulfillment === 'delivery_locker'
   const [offer, setOffer]     = useState(null)
   const [busy, setBusy]       = useState(false)
   const [problem, setProblem] = useState(null)
 
-  // free quote whenever the panel opens or the box or collection point changes
+  // free quote whenever the panel opens or the box, sender or drop-off locker changes
   useEffect(() => {
     if (!open) return
     let stale = false
     setOffer(null)
     setProblem(null)
+    if (isLocker && !dropOff) return   // nothing to price until the drop-off locker is chosen
     setBusy(true)
-    courier('quote', { order_id: order.id, parcel, from }).then(({ data, error }) => {
+    courier('quote', { order_id: order.id, parcel, from, drop_off: dropOff?.id }).then(({ data, error }) => {
       if (stale) return
       setBusy(false)
       if (error) setProblem(error)
       else setOffer(data)
     })
     return () => { stale = true }
-  }, [open, parcel, from, order.id])
+  }, [open, parcel, from, dropOff, isLocker, order.id])
+
+  function chooseDropOff(locker) {
+    setDropOff(locker)
+    try {
+      if (locker) localStorage.setItem('dropOffLocker', JSON.stringify(locker))
+      else localStorage.removeItem('dropOffLocker')
+    } catch { /* private window — just not remembered */ }
+  }
 
   async function book() {
-    const place = COLLECTION_POINTS.find(p => p.key === from).label
-    if (!confirm(`Book Courier Guy ${offer.service_name} from ${place} for R ${offer.rate.toFixed(2)}? This is billed to your account.`)) return
+    const place = isLocker ? `drop-off at ${dropOff.name}` : `from ${COLLECTION_POINTS.find(p => p.key === from).label}`
+    if (!confirm(`Book Courier Guy ${offer.service_name}, ${place}, for R ${offer.rate.toFixed(2)}? This is billed to your account.`)) return
     setBusy(true)
     setProblem(null)
-    const { data, error } = await courier('book', { order_id: order.id, parcel, from, confirmed_rate: offer.rate })
+    const { data, error } = await courier('book', { order_id: order.id, parcel, from, drop_off: dropOff?.id, confirmed_rate: offer.rate })
     setBusy(false)
 
     if (error) {
@@ -284,6 +300,7 @@ function CourierPanel({ order, onChange, onBooked }) {
       return
     }
     toast.success(`Courier booked · tracking ${data.tracking_ref}`)
+    if (isLocker) toast.info(`Drop the parcel at ${dropOff.name}`, { duration: 10000 })
     if (data.email_sent) toast.success(`Tracking emailed to ${order.customer_email}`)
     else toast.warning('Booked, but the tracking email did not send — pass the number on yourself.')
     onChange({
@@ -378,9 +395,19 @@ function CourierPanel({ order, onChange, onBooked }) {
 
   return (
     <div className={`${box} space-y-3`}>
-      {/* collection point */}
+      {/* drop-off locker — locker orders only */}
+      {isLocker && (
+        <div className="flex flex-wrap items-start gap-2">
+          <span className="text-xs text-gray-500 w-24 pt-2">Drop off at</span>
+          <div className="flex-1 min-w-[16rem]">
+            <LockerPicker value={dropOff} onChange={chooseDropOff} label="Our drop-off locker" />
+          </div>
+        </div>
+      )}
+
+      {/* collection point, or who is sending a locker parcel */}
       <div className="flex flex-wrap items-center gap-2">
-        <span className="text-xs text-gray-500 w-24">Collect from</span>
+        <span className="text-xs text-gray-500 w-24">{isLocker ? 'Sender' : 'Collect from'}</span>
         {COLLECTION_POINTS.map(p => (
           <button
             key={p.key}
@@ -422,7 +449,7 @@ function CourierPanel({ order, onChange, onBooked }) {
         <p>
           <strong>{offer.service_name} · R {offer.rate.toFixed(2)}</strong>
           <span className="text-gray-500">
-            {' '}— collected {fmtDay(offer.collection_date)}, delivered {fmtDay(offer.delivery_from)}–{fmtDay(offer.delivery_to)}
+            {' '}— {isLocker ? '' : `collected ${fmtDay(offer.collection_date)}, `}delivered {fmtDay(offer.delivery_from)}–{fmtDay(offer.delivery_to)}
           </span>
         </p>
       )}

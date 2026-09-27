@@ -104,41 +104,53 @@ const LOCKER_ORDER = {
   shipping_line1: null, shipping_line2: null, shipping_city: null, shipping_province: null, shipping_postal: null,
   pudo_locker_id: 'CG1375',
 }
+const DROP_OFF = 'RVM00638'   // a locker in eMalahleni the shop drops at
 {
-  // quote goes to the locker, not an address, and carries no declared value
-  const r = rateRequest(LOCKER_ORDER, 'small', 240, DEFAULT_COLLECTION)
+  // Locker to Locker: from our drop-off locker to theirs — no addresses, no declared value
+  const r = rateRequest(LOCKER_ORDER, 'small', 240, DEFAULT_COLLECTION, DROP_OFF)
   assert.equal(r.ok, true)
+  assert.equal(r.body.collection_pickup_point_id, DROP_OFF)
+  assert.equal(r.body.collection_pickup_point_provider, LOCKER_PROVIDER)
   assert.equal(r.body.delivery_pickup_point_id, 'CG1375')
   assert.equal(r.body.delivery_pickup_point_provider, LOCKER_PROVIDER)
+  assert.equal('collection_address' in r.body, false)
   assert.equal('delivery_address' in r.body, false)
   assert.equal('declared_value' in r.body, false)
 
-  // the booking keeps the locker
-  const s = shipmentRequest(LOCKER_ORDER, 'small', 240, DEFAULT_COLLECTION, 264523, SHOP)
+  // the booking keeps both lockers, and the sender's contact
+  const s = shipmentRequest(LOCKER_ORDER, 'small', 240, 'middelburg', 264523, SHOP, DROP_OFF)
   assert.equal(s.ok, true)
+  assert.equal(s.body.collection_pickup_point_id, DROP_OFF)
   assert.equal(s.body.delivery_pickup_point_id, 'CG1375')
-  assert.equal('delivery_address' in s.body, false)
+  assert.deepEqual(s.body.collection_contact, SHOP)
 
-  // a locker order with no locker can't be quoted
-  const none = rateRequest({ ...LOCKER_ORDER, pudo_locker_id: null }, 'small', 240, DEFAULT_COLLECTION)
-  assert.equal(none.ok, false)
-  assert.match(none.reason, /locker/)
+  // needs both the customer's locker and our drop-off locker
+  const noLocker = rateRequest({ ...LOCKER_ORDER, pudo_locker_id: null }, 'small', 240, DEFAULT_COLLECTION, DROP_OFF)
+  assert.equal(noLocker.ok, false)
+  assert.match(noLocker.reason, /locker/)
+  const noDropOff = rateRequest(LOCKER_ORDER, 'small', 240, DEFAULT_COLLECTION)
+  assert.equal(noDropOff.ok, false)
+  assert.match(noDropOff.reason, /drop/)
 
-  // door orders are untouched
-  assert.equal('delivery_address' in rateRequest(ORDER, 'small', 240, DEFAULT_COLLECTION).body, true)
+  // door orders are untouched: collected from our address, delivered to theirs
+  const door = rateRequest(ORDER, 'small', 240, DEFAULT_COLLECTION, DROP_OFF)
+  assert.equal('collection_address' in door.body, true)
+  assert.equal('collection_pickup_point_id' in door.body, false)
+  assert.equal('delivery_address' in door.body, true)
 }
 
 // --- choosing a locker rate ---
 {
   const rates = [
-    { rate: 190.52, service_level: { code: 'D2LL - ECO' } },
-    { rate: 128.82, service_level: { code: 'D2LM - ECO' } },
+    { rate: 109,    service_level: { code: 'L2LL - ECO' } },
+    { rate: 79,     service_level: { code: 'L2LM - ECO' } },
+    { rate: 128.82, service_level: { code: 'D2LM - ECO' } },   // door to locker — not used any more
     { rate: 127.22, service_level: { code: 'ECO' } },
   ]
-  assert.equal(pickLocker(rates).rate, 128.82)
-  assert.equal(pickRate(LOCKER_ORDER, rates).rate, 128.82)
+  assert.equal(pickLocker(rates).rate, 79)
+  assert.equal(pickRate(LOCKER_ORDER, rates).rate, 79)
   assert.equal(pickRate(ORDER, rates).rate, 127.22)
-  assert.equal(pickLocker([{ rate: 127.22, service_level: { code: 'ECO' } }]), null)
+  assert.equal(pickLocker([{ rate: 128.82, service_level: { code: 'D2LM - ECO' } }]), null)
 }
 
 // --- tidying locker search results ---
@@ -219,10 +231,10 @@ if (process.argv.includes('--quote')) {
   assert.ok(lockers.length > 0, 'no online lockers found in Middelburg')
   console.log(`  ${lockers.length} online lockers in Middelburg, e.g. ${lockers[0].name} — ${lockers[0].address}`)
 
-  const lockerQuote = await getRates(key, rateRequest({ ...LOCKER_ORDER, pudo_locker_id: lockers[0].id }, 'small', 240, DEFAULT_COLLECTION).body)
+  const lockerQuote = await getRates(key, rateRequest({ ...LOCKER_ORDER, pudo_locker_id: lockers[0].id }, 'small', 240, DEFAULT_COLLECTION, DROP_OFF).body)
   assert.equal(lockerQuote.ok, true, `locker quote failed (${lockerQuote.status})`)
   const best = pickLocker(lockerQuote.body.rates)
   assert.ok(best, 'no locker rate returned')
-  console.log(`  to that locker, Small box: ${best.service_level.name} R ${best.rate}`)
+  console.log(`  from our drop-off locker to that one, Small box: ${best.service_level.name} R ${best.rate}`)
   console.log('live locker search + quote: accepted by Courier Guy')
 }

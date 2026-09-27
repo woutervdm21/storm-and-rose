@@ -32,7 +32,7 @@ export const DELIVERY_METHODS = [
     label: 'Pudo Locker',
     short: 'Courier Guy · Pudo Locker',
     blurb: 'Collected from your nearest Pudo locker',
-    fee:   130,
+    fee:   80,
     address: null,
   },
 ]

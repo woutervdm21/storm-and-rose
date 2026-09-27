@@ -1,9 +1,11 @@
 // Books The Courier Guy for a door-to-door or Pudo locker order, from the admin Orders page.
 //
-//   { action: 'quote', order_id, parcel, from }                  — free price check
-//   { action: 'book',  order_id, parcel, from, confirmed_rate }  — books and bills a real collection
+//   { action: 'quote', order_id, parcel, from, drop_off? }                  — free price check
+//   { action: 'book',  order_id, parcel, from, drop_off?, confirmed_rate }  — books and bills it
 //
-// `from` is the collection point (emalahleni | middelburg).
+// `from` is the sender (emalahleni | middelburg) — the collection address for a
+// door order, and whose contact goes on the waybill. A locker order goes
+// Locker to Locker: `drop_off` is the Pudo locker the shop takes it to.
 //   { action: 'label', order_id }                            — waybill PDF link
 //   { action: 'release', order_id }                          — unstick a booking that never completed
 //   { action: 'track' }                                      — refresh shipped orders from Courier Guy tracking;
@@ -68,7 +70,7 @@ Deno.serve(async (req) => {
   const key = Deno.env.get('COURIER_GUY_API_KEY')
   if (!key) return json({ error: 'COURIER_GUY_API_KEY is not set.' }, 500)
 
-  const { action, order_id, parcel = DEFAULT_PARCEL, from = DEFAULT_COLLECTION, confirmed_rate } =
+  const { action, order_id, parcel = DEFAULT_PARCEL, from = DEFAULT_COLLECTION, drop_off, confirmed_rate } =
     await req.json().catch(() => ({} as Record<string, any>))
 
   // --- track: every shipped order at once, called when the Orders page opens ---
@@ -155,7 +157,7 @@ Deno.serve(async (req) => {
       sum + i.quantity * Number(i.products?.price ?? 0), 0)
 
   // --- quote (also the first step of booking) ---
-  const rateBody = rateRequest(order, parcel, declaredValue, from)
+  const rateBody = rateRequest(order, parcel, declaredValue, from, drop_off)
   if (!rateBody.ok) return json({ error: `Can't quote: ${rateBody.reason}.` }, 400)
 
   const quote = await getRates(key, rateBody.body)
@@ -164,7 +166,7 @@ Deno.serve(async (req) => {
     console.error('Quote failed', order.id, quote.status, quote.body)
     return json({
       error: isLockerOrder(order)
-        ? 'Courier Guy did not return a locker price. The box may be too big for a locker, or the locker may be offline — try a smaller box, or book it in the portal.'
+        ? 'Courier Guy did not return a locker-to-locker price. The box may be too big for a locker, or one of the lockers may be offline — try a smaller box or another drop-off locker.'
         : 'Courier Guy did not return an Economy price for this address. Check the address, or book it in the portal.',
     }, 502)
   }
@@ -197,7 +199,7 @@ Deno.serve(async (req) => {
     return json({ error: `${prefix}_NAME and ${prefix}_PHONE must be set before booking from here.` }, 500)
   }
 
-  const shipment = shipmentRequest(order, parcel, declaredValue, from, offer.service_level_id, shop)
+  const shipment = shipmentRequest(order, parcel, declaredValue, from, offer.service_level_id, shop, drop_off)
   if (!shipment.ok) return json({ error: `Can't book: ${shipment.reason}.` }, 400)
 
   // claim the order — only one request can move courier_booked_at off null
@@ -243,7 +245,8 @@ Deno.serve(async (req) => {
     const mail = customerShippedEmail(order, order.order_items ?? [], {
       trackingRef:    tracking_ref,
       trackingUrl:    trackingUrl(tracking_ref),
-      collectionDate: offer.collection_date,
+      // a locker parcel isn't collected from us — the shop drops it off
+      collectionDate: isLockerOrder(order) ? null : offer.collection_date,
     })
     const sent = await sendEmail({
       to:             order.customer_email,

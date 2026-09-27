@@ -60,9 +60,11 @@ export const DEFAULT_PARCEL = 'small'
 // only Economy is used — the cheapest service, and the one the fee is based on
 export const SERVICE_CODES = ['ECO', 'ECOR']
 
-// Pudo lockers, as Courier Guy names them. Locker services are priced by the
-// compartment the parcel fits (codes D2LXS, D2LS, D2LM, D2LL…), and the API
-// only offers the sizes the parcel actually fits into.
+// Pudo lockers, as Courier Guy names them. Locker orders go Locker to Locker:
+// the shop drops the parcel at a Pudo locker and it travels to the customer's
+// locker — about R79 against R129 for a driver collecting (Door to Locker).
+// Priced by the compartment the parcel fits (L2LM, L2LL…); the API only
+// offers the sizes the parcel actually fits into.
 export const LOCKER_PROVIDER = 'tcg-locker'
 
 export type CourierOrder = {
@@ -136,19 +138,35 @@ function destinationFor(order: CourierOrder) {
   return { ok: true as const, fields: { delivery_address: delivery.address } as Record<string, unknown> }
 }
 
-// body for POST /rates — a free quote
-export function rateRequest(order: CourierOrder, parcelKey: string, declaredValue: number, from: string) {
+// where the parcel starts: a driver collecting from the shop (door orders), or
+// the Pudo locker the shop drops it at (locker orders)
+function originFor(order: CourierOrder, from: string, dropOff?: string | null) {
+  if (!COLLECTION_POINTS[from]) return { ok: false as const, reason: `unknown collection point "${from}"` }
+  if (isLockerOrder(order)) {
+    const id = dropOff?.trim()
+    if (!id) return { ok: false as const, reason: 'choose the locker you will drop the parcel at' }
+    return {
+      ok: true as const,
+      fields: { collection_pickup_point_id: id, collection_pickup_point_provider: LOCKER_PROVIDER } as Record<string, unknown>,
+    }
+  }
+  return { ok: true as const, fields: { collection_address: COLLECTION_POINTS[from].address } as Record<string, unknown> }
+}
+
+// body for POST /rates — a free quote. `from` picks the sender (and, for door
+// orders, the collection address); `dropOff` is the shop's drop-off locker.
+export function rateRequest(order: CourierOrder, parcelKey: string, declaredValue: number, from: string, dropOff?: string | null) {
   const destination = destinationFor(order)
   if (!destination.ok) return destination
   const parcel = parcelFor(parcelKey)
   if (!parcel) return { ok: false as const, reason: `unknown parcel size "${parcelKey}"` }
-  const point = COLLECTION_POINTS[from]
-  if (!point) return { ok: false as const, reason: `unknown collection point "${from}"` }
+  const origin = originFor(order, from, dropOff)
+  if (!origin.ok) return origin
 
   return {
     ok: true as const,
     body: {
-      collection_address: point.address,
+      ...origin.fields,
       ...destination.fields,
       parcels:            [parcel],
       ...(isLockerOrder(order) ? {} : { declared_value: declaredValue }),
@@ -164,8 +182,9 @@ export function shipmentRequest(
   from: string,
   serviceLevelId: number,
   shop: Contact,
+  dropOff?: string | null,
 ) {
-  const rate = rateRequest(order, parcelKey, declaredValue, from)
+  const rate = rateRequest(order, parcelKey, declaredValue, from, dropOff)
   if (!rate.ok) return rate
   if (!order.customer_phone?.trim()) return { ok: false as const, reason: 'order has no phone number for the courier' }
 
@@ -197,10 +216,10 @@ export function pickEconomy(rates: any[]) {
     .sort((a, b) => a.rate - b.rate)[0] ?? null
 }
 
-// the cheapest door-to-locker rate — the smallest compartment the parcel fits
+// the cheapest locker-to-locker rate — the smallest compartment the parcel fits
 export function pickLocker(rates: any[]) {
   return (rates ?? [])
-    .filter(r => String(r?.service_level?.code ?? '').startsWith('D2L'))
+    .filter(r => String(r?.service_level?.code ?? '').startsWith('L2L'))
     .sort((a, b) => a.rate - b.rate)[0] ?? null
 }
 

@@ -2,7 +2,7 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-export default function LockerPicker({ value, onChange }) {
+export default function LockerPicker({ value, onChange, label = 'Your Pudo locker' }) {
   const [query, setQuery]     = useState('')
   const [results, setResults] = useState(null)   // null = not searched yet
   const [loading, setLoading] = useState(false)
@@ -46,7 +46,7 @@ export default function LockerPicker({ value, onChange }) {
   if (value) {
     return (
       <div className="border border-rose-deep bg-rose-dust/15 rounded-lg px-4 py-3 text-sm">
-        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">Your Pudo locker</p>
+        <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">{label}</p>
         <p className="font-semibold text-rose-deep dark:text-rose-dust">{value.name}</p>
         <p className="text-gray-600 dark:text-gray-300">{value.address}</p>
         <button type="button" onClick={() => onChange(null)} className="text-xs text-rose-mid hover:underline mt-2">
