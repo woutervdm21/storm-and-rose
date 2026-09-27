@@ -1,5 +1,5 @@
--- NOT YET APPLIED. Run in the Supabase SQL editor before deploying the
--- `courier` Edge Function.
+-- APPLIED to project enpyghydpklvuhaicwrr on 2026-09-27, before the `courier`
+-- Edge Function was deployed.
 --
 -- Records a Courier Guy booking on its order, so the admin can see it was
 -- booked, reprint the waybill, and give the customer a tracking reference.
