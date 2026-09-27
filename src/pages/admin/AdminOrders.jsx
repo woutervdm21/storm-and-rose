@@ -314,11 +314,26 @@ function CourierPanel({ order, onChange, onBooked }) {
   }
 
   async function printLabel() {
+    // open the tab now, while it's still part of the click — browsers block a
+    // tab opened after waiting for the label link
+    const tab = window.open('', '_blank')
+    if (tab) {
+      tab.opener = null
+      tab.document.title = 'Loading label…'
+      tab.document.body.textContent = 'Loading the Courier Guy label…'
+    }
+
     setBusy(true)
     const { data, error } = await courier('label', { order_id: order.id })
     setBusy(false)
-    if (error) toast.error(error)
-    else window.open(data.url, '_blank', 'noopener')
+
+    if (error) {
+      tab?.close()
+      toast.error(error)
+      return
+    }
+    if (tab) tab.location.href = data.url
+    else window.location.href = data.url   // pop-ups fully blocked: open it here instead
   }
 
   // only after checking the portal: clears a booking that never completed
