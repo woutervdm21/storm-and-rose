@@ -259,6 +259,23 @@ export const getRates     = (key: string, body: unknown) => call('/rates', key, 
 export const createShipment = (key: string, body: unknown) => call('/shipments', key, { method: 'POST', body: JSON.stringify(body) })
 export const getLabel     = (key: string, shipmentId: number) => call(`/shipments/label?id=${shipmentId}`, key)
 
+// tracking for one shipment. The lookup is by reference and can return other
+// accounts' parcels that share it, so callers match on our own shipment id.
+export const trackShipment = (key: string, trackingRef: string) =>
+  call(`/tracking/shipments?tracking_reference=${encodeURIComponent(trackingRef)}`, key)
+
+// our shipment's current state, out of a tracking response — null if it isn't there
+export function readTracking(body: any, shipmentId: number) {
+  const shipment = (body?.shipments ?? []).find((s: any) => Number(s?.shipment_id) === Number(shipmentId))
+  if (!shipment) return null
+  const status = String(shipment.status ?? '')
+  return {
+    status,
+    delivered:   status === 'delivered' || Boolean(shipment.shipment_delivered_date),
+    deliveredAt: shipment.shipment_delivered_date ?? null,
+  }
+}
+
 // lockers matching a town/suburb/street, or closest to a point
 export function findLockers(key: string, where: { q?: string; lat?: number; lng?: number }) {
   const params = new URLSearchParams({ type: 'locker', order_closest: 'true' })

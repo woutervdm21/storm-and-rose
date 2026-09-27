@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '../../lib/supabase'
 import { fulfillmentInfo, orderDeliveryFee } from '../../lib/fulfillment'
-import { courier, trackingUrl, PARCELS, DEFAULT_PARCEL, COLLECTION_POINTS, DEFAULT_COLLECTION } from '../../lib/courier'
+import { courier, trackingUrl, statusLabel, PARCELS, DEFAULT_PARCEL, COLLECTION_POINTS, DEFAULT_COLLECTION } from '../../lib/courier'
 
 // visual config per status
 const STATUS_CONFIG = {
@@ -22,7 +22,15 @@ const STATUS_CONFIG = {
     active:   'bg-blue-500 text-white',
     inactive: 'border border-blue-400 text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-500/10',
   },
+  delivered: {
+    label: 'Delivered',
+    active:   'bg-violet-500 text-white',
+    inactive: 'border border-violet-400 text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-500/10',
+  },
 }
+
+// stock comes off once, when an order first leaves pending/paid
+const HOLDS_STOCK = ['pending_payment', 'paid']
 
 // filter options — 'active' is the default (pending_payment + paid)
 const FILTERS = [
@@ -30,6 +38,7 @@ const FILTERS = [
   { key: 'pending_payment', label: 'Pending Payment' },
   { key: 'paid',            label: 'Paid' },
   { key: 'shipped',         label: 'Shipped' },
+  { key: 'delivered',       label: 'Delivered' },
   { key: 'all',             label: 'All' },
 ]
 
@@ -39,7 +48,7 @@ export default function AdminOrders() {
   // booked this visit — kept on screen so the label can still be printed
   const [justBooked, setJustBooked] = useState([])
 
-  useEffect(() => { loadOrders() }, [])
+  useEffect(() => { loadOrders().then(refreshTracking) }, [])
 
   async function loadOrders() {
     const { data } = await supabase
@@ -49,11 +58,24 @@ export default function AdminOrders() {
     setOrders(data ?? [])
   }
 
+  // ask Courier Guy about shipped orders; delivered ones move to Delivered
+  async function refreshTracking() {
+    const { data } = await courier('track', {})
+    const updated = data?.updated ?? []
+    if (!updated.length) return
+    setOrders(prev => prev.map(o => {
+      const u = updated.find(x => x.id === o.id)
+      return u ? { ...o, ...u } : o
+    }))
+    const delivered = updated.filter(u => u.status === 'delivered').length
+    if (delivered) toast.success(`${delivered} order${delivered > 1 ? 's' : ''} delivered`)
+  }
+
   async function handleStatusChange(order, newStatus) {
     if (order.status === newStatus) return
 
-    // deduct stock when transitioning to shipped
-    if (newStatus === 'shipped') {
+    // deduct stock when an order first goes out (shipped, or straight to delivered)
+    if (HOLDS_STOCK.includes(order.status) && !HOLDS_STOCK.includes(newStatus)) {
       for (const item of order.order_items ?? []) {
         const { data: product } = await supabase
           .from('products')
@@ -303,6 +325,11 @@ function CourierPanel({ order, onChange, onBooked }) {
              className="text-rose-mid hover:underline">
             Tracking {order.courier_tracking_ref}
           </a>
+        )}
+        {order.courier_status && (
+          <span className="text-gray-500" title={order.courier_checked_at ? `Checked ${new Date(order.courier_checked_at).toLocaleString()}` : undefined}>
+            {statusLabel(order.courier_status)}
+          </span>
         )}
         {order.courier_cost != null && <span className="text-gray-500">R {Number(order.courier_cost).toFixed(2)}</span>}
         <button onClick={printLabel} disabled={busy} className="text-rose-mid hover:underline disabled:opacity-50">

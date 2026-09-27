@@ -13,7 +13,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
   deliveryAddressFor, rateRequest, shipmentRequest, pickEconomy, pickLocker, pickRate, getRates,
-  tidyLockers, findLockers, LOCKER_PROVIDER,
+  tidyLockers, findLockers, LOCKER_PROVIDER, readTracking,
   COLLECTION_POINTS, DEFAULT_COLLECTION, PARCELS, DEFAULT_PARCEL,
 } from '../supabase/functions/_shared/courier.ts'
 
@@ -167,6 +167,26 @@ const LOCKER_ORDER = {
   } })])
   assert.equal(repeated[0].address, '19A Samora Machel St, Middelburg, 1055')
   assert.deepEqual(tidyLockers(undefined), [])
+}
+
+// --- reading tracking ---
+{
+  const body = { shipments: [
+    // someone else's parcel that happens to share the reference
+    { shipment_id: 111, status: 'delivered', shipment_delivered_date: '2026-09-01T10:00:00Z' },
+    { shipment_id: 222, status: 'in-transit', shipment_delivered_date: null },
+  ] }
+  assert.deepEqual(readTracking(body, 222), { status: 'in-transit', delivered: false, deliveredAt: null })
+  // never picks up another account's parcel
+  assert.equal(readTracking(body, 333), null)
+  assert.equal(readTracking({ shipments: [] }, 222), null)
+  assert.equal(readTracking(undefined, 222), null)
+
+  // delivered by status, or by a delivered date alone
+  assert.equal(readTracking({ shipments: [{ shipment_id: 5, status: 'delivered' }] }, 5).delivered, true)
+  const byDate = readTracking({ shipments: [{ shipment_id: '5', status: 'pod-captured', shipment_delivered_date: '2026-10-01T12:00:00Z' }] }, 5)
+  assert.equal(byDate.delivered, true)
+  assert.equal(byDate.deliveredAt, '2026-10-01T12:00:00Z')
 }
 
 console.log('courier builders: all checks passed')

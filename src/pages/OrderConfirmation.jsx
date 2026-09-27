@@ -93,7 +93,7 @@ export default function OrderConfirmation() {
   }
 
   const reference = String(orderId).slice(0, 8).toUpperCase()
-  const paid      = status === 'paid' || status === 'shipped'
+  const paid      = ['paid', 'shipped', 'delivered'].includes(status)
   const cardFlow  = Boolean(outcome)
 
   return (

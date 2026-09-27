@@ -20,6 +20,10 @@ export const DEFAULT_COLLECTION = 'emalahleni'
 export const trackingUrl = (ref) =>
   `https://portal.thecourierguy.co.za/track?ref=${encodeURIComponent(ref)}`
 
+// Courier Guy's tracking status, readable: 'out-for-delivery' → 'Out for delivery'
+export const statusLabel = (status) =>
+  status ? status.charAt(0).toUpperCase() + status.slice(1).replace(/-/g, ' ') : ''
+
 // call the `courier` Edge Function; always resolves to { data } or { error: message }
 export async function courier(action, body) {
   const { data, error } = await supabase.functions.invoke('courier', { body: { action, ...body } })

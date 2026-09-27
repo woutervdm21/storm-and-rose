@@ -6,6 +6,8 @@
 // `from` is the collection point (emalahleni | middelburg).
 //   { action: 'label', order_id }                            — waybill PDF link
 //   { action: 'release', order_id }                          — unstick a booking that never completed
+//   { action: 'track' }                                      — refresh shipped orders from Courier Guy tracking;
+//                                                              moves delivered ones to 'delivered'
 //
 // Runs server-side so the Courier Guy key never reaches a browser. Only a
 // signed-in admin may call it: the anon key is also a valid JWT, so the
@@ -26,7 +28,7 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import {
-  rateRequest, shipmentRequest, pickRate, isLockerOrder, trackingUrl,
+  rateRequest, shipmentRequest, pickRate, isLockerOrder, trackingUrl, trackShipment, readTracking,
   getRates, createShipment, getLabel, DEFAULT_PARCEL, DEFAULT_COLLECTION,
 } from '../_shared/courier.ts'
 import { customerShippedEmail, sendEmail } from '../_shared/order-email.ts'
@@ -44,6 +46,11 @@ const json = (body: unknown, status = 200) =>
 
 // a price counts as unchanged within a cent
 const samePrice = (a: number, b: number) => Math.abs(Number(a) - Number(b)) < 0.01
+
+// tracking refresh limits: how many orders per call, and how often each is asked about
+const TRACK_BATCH        = 25
+const TRACK_EVERY_MS     = 10 * 60 * 1000
+const TRACK_FOR_DAYS     = 60
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
@@ -63,6 +70,46 @@ Deno.serve(async (req) => {
 
   const { action, order_id, parcel = DEFAULT_PARCEL, from = DEFAULT_COLLECTION, confirmed_rate } =
     await req.json().catch(() => ({} as Record<string, any>))
+
+  // --- track: every shipped order at once, called when the Orders page opens ---
+  if (action === 'track') {
+    const since = new Date(Date.now() - TRACK_FOR_DAYS * 86_400_000).toISOString()
+    const fresh = new Date(Date.now() - TRACK_EVERY_MS).toISOString()
+
+    // shipped, booked through here, recent, and not asked about in the last few minutes
+    const { data: shipped } = await supabase
+      .from('orders')
+      .select('id, courier_shipment_id, courier_tracking_ref')
+      .eq('status', 'shipped')
+      .not('courier_shipment_id', 'is', null)
+      .not('courier_tracking_ref', 'is', null)
+      .gte('courier_booked_at', since)
+      .or(`courier_checked_at.is.null,courier_checked_at.lt."${fresh}"`)
+      .limit(TRACK_BATCH)
+
+    const updates = await Promise.all((shipped ?? []).map(async (o) => {
+      const res = await trackShipment(key, o.courier_tracking_ref).catch(() => null)
+      const now = new Date().toISOString()
+      const tracked = res?.ok ? readTracking(res.body, o.courier_shipment_id) : null
+      if (!tracked) {
+        // note the attempt so a lookup that keeps failing isn't retried on every visit
+        await supabase.from('orders').update({ courier_checked_at: now }).eq('id', o.id)
+        return null
+      }
+
+      const fields: Record<string, unknown> = { courier_status: tracked.status, courier_checked_at: now }
+      if (tracked.delivered) {
+        fields.status       = 'delivered'
+        fields.delivered_at = tracked.deliveredAt ?? now
+      }
+      // only a still-shipped order moves, in case an admin changed it meanwhile
+      await supabase.from('orders').update(fields).eq('id', o.id).eq('status', 'shipped')
+      return { id: o.id, ...fields }
+    }))
+
+    return json({ updated: updates.filter(Boolean) })
+  }
+
   if (!order_id) return json({ error: 'order_id required' }, 400)
 
   // load the order, with prices from products rather than what checkout sent
