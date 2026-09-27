@@ -1,4 +1,4 @@
--- NOT YET APPLIED. Run the whole file at once in the Supabase SQL editor.
+-- APPLIED to project enpyghydpklvuhaicwrr on 2026-09-27.
 --
 -- order_items had two insert policies, both `with check (true)`: anyone could
 -- add items to ANY order at any time — including one already paid. A card
