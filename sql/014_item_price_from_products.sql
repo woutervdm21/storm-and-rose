@@ -1,4 +1,4 @@
--- NOT YET APPLIED. Run the whole file at once in the Supabase SQL editor.
+-- APPLIED to project enpyghydpklvuhaicwrr on 2026-09-27.
 --
 -- order_items.unit_price was whatever the customer's browser sent (anon may
 -- insert items, sql/010). Card payments were safe — yoco-create-checkout
