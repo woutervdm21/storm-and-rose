@@ -1,4 +1,4 @@
--- NOT YET APPLIED. Run in the Supabase SQL editor BEFORE the matching code is
+-- APPLIED to project enpyghydpklvuhaicwrr on 2026-09-27.
 -- deployed — the courier function writes 'delivered' and these columns.
 --
 -- Adds a 'delivered' order status, and the latest Courier Guy tracking status.
