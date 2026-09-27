@@ -79,6 +79,12 @@ export default function Checkout() {
       return
     }
 
+    // guard: the courier can't find a door without a house or unit number
+    if (delivering && !toLocker && !/\d/.test(form.shipping_line1)) {
+      setError('Please include your house or unit number in the street address, e.g. "23 Seinheuwel Crescent".')
+      return
+    }
+
     setSubmitting(true)
     setError(null)
 
@@ -305,6 +311,9 @@ export default function Checkout() {
           <h2 className="font-serif text-lg text-rose-deep dark:text-rose-dust">Delivery Address</h2>
           <Field label="Street Address">
             <input name="shipping_line1" required value={form.shipping_line1} onChange={handleChange} className="input-field" placeholder="123 Main Street" />
+            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+              Include your house or unit number so the courier can find you.
+            </p>
           </Field>
           <Field label="Suburb / Unit (optional)">
             <input name="shipping_line2" value={form.shipping_line2} onChange={handleChange} className="input-field" placeholder="Apt 4B, Thornhill Estate" />

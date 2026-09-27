@@ -483,6 +483,27 @@ function CourierPanel({ order, onChange, onBooked, onCancelled }) {
         ))}
       </div>
 
+      {/* exactly where it's going — check it before paying for the booking */}
+      <div className="rounded-lg border border-rose-dust/30 bg-rose-dust/5 px-3 py-2">
+        <p className="text-xs text-gray-500 mb-0.5">Deliver to</p>
+        {isLocker ? (
+          <p>{order.pudo_locker_name} · {order.pudo_locker_address}</p>
+        ) : (
+          <>
+            <p>
+              {[order.shipping_line1, order.shipping_line2, order.shipping_city, order.shipping_province, order.shipping_postal]
+                .filter(Boolean).join(', ')}
+            </p>
+            {!/\d/.test(order.shipping_line1 ?? '') && (
+              <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+                ⚠ No house number — the courier may not find it. Check with the customer before booking.
+              </p>
+            )}
+          </>
+        )}
+        <p className="text-xs text-gray-500 mt-1">{order.customer_name} · {order.customer_phone}</p>
+      </div>
+
       {/* quote */}
       {busy && !offer && <p className="text-gray-500">Getting a price…</p>}
       {offer && (
