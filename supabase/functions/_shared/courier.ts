@@ -278,6 +278,11 @@ export const getRates     = (key: string, body: unknown) => call('/rates', key, 
 export const createShipment = (key: string, body: unknown) => call('/shipments', key, { method: 'POST', body: JSON.stringify(body) })
 export const getLabel     = (key: string, shipmentId: number) => call(`/shipments/label?id=${shipmentId}`, key)
 
+// cancels a booking, by its short tracking reference — Courier Guy refuses
+// once the parcel has been collected
+export const cancelShipment = (key: string, trackingRef: string) =>
+  call('/shipments/cancel', key, { method: 'POST', body: JSON.stringify({ tracking_reference: trackingRef }) })
+
 // tracking for one shipment. The lookup is by reference and can return other
 // accounts' parcels that share it, so callers match on our own shipment id.
 export const trackShipment = (key: string, trackingRef: string) =>

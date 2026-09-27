@@ -8,6 +8,7 @@
 // Locker to Locker: `drop_off` is the Pudo locker the shop takes it to.
 //   { action: 'label', order_id }                            — waybill PDF link
 //   { action: 'release', order_id }                          — unstick a booking that never completed
+//   { action: 'cancel', order_id }                           — cancel a booking before it's collected
 //   { action: 'track' }                                      — refresh shipped orders from Courier Guy tracking;
 //                                                              moves delivered ones to 'delivered'
 //
@@ -31,7 +32,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import {
   rateRequest, shipmentRequest, pickRate, isLockerOrder, trackingUrl, trackShipment, readTracking,
-  getRates, createShipment, getLabel, DEFAULT_PARCEL, DEFAULT_COLLECTION,
+  getRates, createShipment, getLabel, cancelShipment, DEFAULT_PARCEL, DEFAULT_COLLECTION,
 } from '../_shared/courier.ts'
 import { customerShippedEmail, sendEmail } from '../_shared/order-email.ts'
 
@@ -131,6 +132,29 @@ Deno.serve(async (req) => {
       return json({ error: 'Courier Guy did not return a label. Try again in a minute.' }, 502)
     }
     return json({ url: res.body.url })
+  }
+
+  // --- cancel: undo a booking before the driver collects ---
+  if (action === 'cancel') {
+    if (!order.courier_shipment_id || !order.courier_tracking_ref) {
+      return json({ error: 'This order has no booking to cancel.' }, 400)
+    }
+    const res = await cancelShipment(key, order.courier_tracking_ref)
+    if (!res.ok) {
+      console.error('Cancel failed', order.id, order.courier_tracking_ref, res.status, res.body)
+      const detail = typeof res.body === 'string' ? res.body : res.body?.message ?? ''
+      return json({ error: `Courier Guy would not cancel it. ${detail}`.trim() }, 502)
+    }
+    console.log('Booking cancelled', order.id, order.courier_tracking_ref, order.courier_shipment_id)
+
+    // clear the booking so the order can be booked again
+    const cleared = {
+      courier_booked_at: null, courier_shipment_id: null, courier_tracking_ref: null,
+      courier_cost: null, courier_status: null, courier_checked_at: null,
+    }
+    const { error: clearError } = await supabase.from('orders').update(cleared).eq('id', order.id)
+    if (clearError) console.error('Cancelled but not cleared', order.id, clearError)
+    return json({ cancelled: order.courier_tracking_ref, ...cleared })
   }
 
   // --- release: clear a booking that never completed, once the admin has
@@ -253,7 +277,8 @@ Deno.serve(async (req) => {
       subject:        mail.subject,
       html:           mail.html,
       replyTo:        Deno.env.get('ORDER_EMAIL_TO'),
-      idempotencyKey: `order-shipped-${order.id}`,
+      // per booking, so a cancelled-and-rebooked order still gets its new number
+      idempotencyKey: `order-shipped-${order.id}-${created.body.id}`,
     }).catch((err) => ({ ok: false, status: 0, body: String(err) }))
     email_sent = sent.ok
     if (!sent.ok) console.error('Tracking email failed', order.id, sent.status, sent.body)

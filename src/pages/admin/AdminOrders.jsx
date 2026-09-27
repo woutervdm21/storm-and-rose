@@ -75,8 +75,11 @@ export default function AdminOrders() {
   async function handleStatusChange(order, newStatus) {
     if (order.status === newStatus) return
 
-    // deduct stock when an order first goes out (shipped, or straight to delivered)
-    if (HOLDS_STOCK.includes(order.status) && !HOLDS_STOCK.includes(newStatus)) {
+    // stock comes off when an order goes out (shipped, or straight to delivered),
+    // and goes back on if it returns to paid/pending (e.g. a cancelled booking)
+    const goingOut   = HOLDS_STOCK.includes(order.status) && !HOLDS_STOCK.includes(newStatus)
+    const comingBack = !HOLDS_STOCK.includes(order.status) && HOLDS_STOCK.includes(newStatus)
+    if (goingOut || comingBack) {
       for (const item of order.order_items ?? []) {
         const { data: product } = await supabase
           .from('products')
@@ -85,7 +88,9 @@ export default function AdminOrders() {
           .single()
 
         if (product) {
-          const newStock = Math.max(0, product.stock - item.quantity)
+          const newStock = goingOut
+            ? Math.max(0, product.stock - item.quantity)
+            : product.stock + item.quantity
           await supabase.from('products').update({ stock: newStock }).eq('id', item.product_id)
         }
       }
@@ -234,6 +239,8 @@ export default function AdminOrders() {
                   onChange={fields => patchOrder(order.id, fields)}
                   // a booked parcel is on its way — same as clicking Shipped, stock included
                   onBooked={() => { setJustBooked(prev => [...prev, order.id]); handleStatusChange(order, 'shipped') }}
+                  // a cancelled booking puts the order back to Paid, stock included
+                  onCancelled={() => handleStatusChange(order, 'paid')}
                 />
               )}
             </div>
@@ -246,7 +253,7 @@ export default function AdminOrders() {
 
 // Book The Courier Guy for one order: pick a box, see the real price, confirm.
 // Nothing is booked (or billed) until "Confirm booking" is clicked.
-function CourierPanel({ order, onChange, onBooked }) {
+function CourierPanel({ order, onChange, onBooked, onCancelled }) {
   const [open, setOpen]       = useState(false)
   const [parcel, setParcel]   = useState(DEFAULT_PARCEL)
   const [from, setFrom]       = useState(DEFAULT_COLLECTION)
@@ -336,6 +343,19 @@ function CourierPanel({ order, onChange, onBooked }) {
     else window.location.href = data.url   // pop-ups fully blocked: open it here instead
   }
 
+  // cancel with Courier Guy, then clear the booking so the order can be rebooked
+  async function cancelBooking() {
+    if (!confirm(`Cancel Courier Guy booking ${order.courier_tracking_ref}? The order goes back to Paid and its stock is added back. Check the Courier Guy portal for the refund.`)) return
+    setBusy(true)
+    const { data, error } = await courier('cancel', { order_id: order.id })
+    setBusy(false)
+    if (error) { toast.error(error); return }
+    toast.success(`Booking ${data.cancelled} cancelled`)
+    const { cancelled, ...cleared } = data
+    onChange(cleared)
+    if (order.status === 'shipped') onCancelled()
+  }
+
   // only after checking the portal: clears a booking that never completed
   async function release() {
     if (!confirm('Only do this if the Courier Guy portal shows NO booking for this order. Continue?')) return
@@ -365,8 +385,13 @@ function CourierPanel({ order, onChange, onBooked }) {
         )}
         {order.courier_cost != null && <span className="text-gray-500">R {Number(order.courier_cost).toFixed(2)}</span>}
         <button onClick={printLabel} disabled={busy} className="text-rose-mid hover:underline disabled:opacity-50">
-          {busy ? 'Fetching label…' : 'Print label'}
+          {busy ? 'Working…' : 'Print label'}
         </button>
+        {order.status !== 'delivered' && (
+          <button onClick={cancelBooking} disabled={busy} className="text-red-400 hover:underline disabled:opacity-50">
+            Cancel booking
+          </button>
+        )}
       </div>
     )
   }
