@@ -10,9 +10,9 @@ import { LOW_STOCK, stockLevel } from '../../lib/stock'
 
 const COLORS = {
   pending_payment: '#F59E0B',
-  paid:            '#10B981',
+  paid:            '#8B5CF6',
   shipped:         '#3B82F6',
-  delivered:       '#8B5CF6',
+  delivered:       '#10B981',
   cancelled:       '#9CA3AF',
 }
 const BAR_COLOR = '#B5607A'

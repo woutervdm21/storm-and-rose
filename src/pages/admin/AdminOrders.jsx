@@ -15,8 +15,8 @@ const STATUS_CONFIG = {
   },
   paid: {
     label: 'Paid',
-    active:   'bg-emerald-500 text-white',
-    inactive: 'border border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10',
+    active:   'bg-violet-500 text-white',
+    inactive: 'border border-violet-400 text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-500/10',
   },
   shipped: {
     label: 'Shipped',
@@ -25,8 +25,8 @@ const STATUS_CONFIG = {
   },
   delivered: {
     label: 'Delivered',
-    active:   'bg-violet-500 text-white',
-    inactive: 'border border-violet-400 text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-500/10',
+    active:   'bg-emerald-500 text-white',
+    inactive: 'border border-emerald-500 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-500/10',
   },
   cancelled: {
     label: 'Cancelled',
