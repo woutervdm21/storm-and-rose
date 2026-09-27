@@ -28,10 +28,17 @@ const STATUS_CONFIG = {
     active:   'bg-violet-500 text-white',
     inactive: 'border border-violet-400 text-violet-500 hover:bg-violet-50 dark:hover:bg-violet-500/10',
   },
+  cancelled: {
+    label: 'Cancelled',
+    active:   'bg-gray-500 text-white',
+    inactive: 'border border-gray-400 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-500/10',
+  },
 }
 
-// stock comes off once, when an order first leaves pending/paid
-const HOLDS_STOCK = ['pending_payment', 'paid']
+// stock is off the shelf while an order is out (shipped or delivered): it comes
+// off when an order goes out, and goes back on if it leaves those again —
+// back to paid after a cancelled booking, or cancelled after it came back
+const STOCK_OUT = ['shipped', 'delivered']
 
 // filter options — 'active' is the default (pending_payment + paid)
 const FILTERS = [
@@ -40,6 +47,7 @@ const FILTERS = [
   { key: 'paid',            label: 'Paid' },
   { key: 'shipped',         label: 'Shipped' },
   { key: 'delivered',       label: 'Delivered' },
+  { key: 'cancelled',       label: 'Cancelled' },
   { key: 'all',             label: 'All' },
 ]
 
@@ -75,10 +83,19 @@ export default function AdminOrders() {
   async function handleStatusChange(order, newStatus) {
     if (order.status === newStatus) return
 
-    // stock comes off when an order goes out (shipped, or straight to delivered),
-    // and goes back on if it returns to paid/pending (e.g. a cancelled booking)
-    const goingOut   = HOLDS_STOCK.includes(order.status) && !HOLDS_STOCK.includes(newStatus)
-    const comingBack = !HOLDS_STOCK.includes(order.status) && HOLDS_STOCK.includes(newStatus)
+    // cancelling: never leave a live courier booking behind, and ask first
+    if (newStatus === 'cancelled') {
+      if (order.courier_shipment_id) {
+        toast.error('This order has a courier booking — use Cancel booking first.')
+        return
+      }
+      const note = STOCK_OUT.includes(order.status) ? ' Its stock will be added back.' : ''
+      if (!confirm(`Cancel order #${order.id.slice(0, 8).toUpperCase()}?${note}`)) return
+    }
+
+    // stock off when an order goes out, back on when it stops being out (see STOCK_OUT)
+    const goingOut   = !STOCK_OUT.includes(order.status) && STOCK_OUT.includes(newStatus)
+    const comingBack = STOCK_OUT.includes(order.status) && !STOCK_OUT.includes(newStatus)
     if (goingOut || comingBack) {
       for (const item of order.order_items ?? []) {
         const { data: product } = await supabase
@@ -192,8 +209,8 @@ export default function AdminOrders() {
                   )}
                 </div>
 
-                {/* 3-button status selector */}
-                <div className="flex gap-2">
+                {/* status selector */}
+                <div className="flex flex-wrap gap-2">
                   {Object.entries(STATUS_CONFIG).map(([status, cfg]) => (
                     <button
                       key={status}

@@ -13,6 +13,7 @@ const COLORS = {
   paid:            '#10B981',
   shipped:         '#3B82F6',
   delivered:       '#8B5CF6',
+  cancelled:       '#9CA3AF',
 }
 const BAR_COLOR = '#B5607A'
 const STOCK_COLORS = { out: '#F87171', low: '#F59E0B', ok: '#B5607A' }
