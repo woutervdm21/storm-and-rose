@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '../../lib/supabase'
-import { fulfillmentInfo, deliveryFeeFor } from '../../lib/fulfillment'
+import { fulfillmentInfo, orderDeliveryFee } from '../../lib/fulfillment'
 import { courier, trackingUrl, PARCELS, DEFAULT_PARCEL, COLLECTION_POINTS, DEFAULT_COLLECTION } from '../../lib/courier'
 
 // visual config per status
@@ -116,7 +116,7 @@ export default function AdminOrders() {
           const subtotal = order.order_items?.reduce(
             (sum, item) => sum + item.quantity * item.unit_price, 0
           ) ?? 0
-          const deliveryFee = deliveryFeeFor(order.fulfillment)
+          const deliveryFee = orderDeliveryFee(order)
           const orderTotal = subtotal + deliveryFee
 
           return (

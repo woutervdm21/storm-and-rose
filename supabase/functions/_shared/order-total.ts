@@ -22,7 +22,9 @@ export type Total = { ok: true; cents: number } | { ok: false; reason: string }
 // Yoco's smallest charge. Anything under it is a broken order, not a cheap one.
 export const MINIMUM_CENTS = 100
 
-export function orderTotalCents(lines: OrderLine[], fulfillment: string): Total {
+// `storedFee` is orders.delivery_fee — set by the database when the order was
+// placed (sql/008), so an order is charged the fee it was quoted
+export function orderTotalCents(lines: OrderLine[], fulfillment: string, storedFee?: number | string | null): Total {
   if (!lines?.length) return { ok: false, reason: 'order has no items' }
 
   let subtotal = 0
@@ -38,7 +40,9 @@ export function orderTotalCents(lines: OrderLine[], fulfillment: string): Total 
     subtotal += price * qty
   }
 
-  const total = subtotal + fulfillmentFor(fulfillment).fee
+  const saved = storedFee == null ? NaN : Number(storedFee)
+  const fee   = Number.isFinite(saved) && saved >= 0 ? saved : fulfillmentFor(fulfillment).fee
+  const total = subtotal + fee
 
   // prices are rands with cents, so round the money, never the multiplication
   const cents = Math.round(total * 100)

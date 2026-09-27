@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
 
   const { data: order, error: orderError } = await supabase
     .from('orders')
-    .select('id, status, fulfillment')
+    .select('id, status, fulfillment, delivery_fee')
     .eq('id', order_id)
     .single()
 
@@ -62,7 +62,7 @@ Deno.serve(async (req) => {
   if (itemsError || !lines?.length) return json({ error: 'Order has no items' }, 400)
 
   // prices come from `products`, never from the submitted order_items
-  const total = orderTotalCents(lines, order.fulfillment)
+  const total = orderTotalCents(lines, order.fulfillment, order.delivery_fee)
 
   if (!total.ok) {
     console.error('Refusing to charge for order', order.id, '-', total.reason)

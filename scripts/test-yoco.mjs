@@ -113,11 +113,25 @@ await check('refuses everything when no secret is configured', async () => {
 // --- what we charge -------------------------------------------------------
 
 const line = (price, quantity = 1) => ({ quantity, products: { price } })
-const cents = (lines, fulfillment) => orderTotalCents(lines, fulfillment)
+const cents = (lines, fulfillment, fee) => orderTotalCents(lines, fulfillment, fee)
 
 await check('charges items plus the door-to-door courier fee', async () => {
   const r = cents([line(450), line(120, 2)], 'delivery_door')
-  assert.deepEqual(r, { ok: true, cents: 82000 })   // 450 + 240 + 130
+  assert.deepEqual(r, { ok: true, cents: 83000 })   // 450 + 240 + 140
+})
+
+await check('charges the fee saved on the order, not today\'s price list', async () => {
+  // an order placed at the old R80 locker fee is charged R80 on a retry
+  assert.deepEqual(cents([line(120)], 'delivery_locker', '80.00'), { ok: true, cents: 20000 })
+  assert.deepEqual(cents([line(120)], 'delivery_locker', 130),     { ok: true, cents: 25000 })
+  // a zero stored fee is a real fee (collection), not a missing one
+  assert.deepEqual(cents([line(120)], 'delivery_door', 0),         { ok: true, cents: 12000 })
+})
+
+await check('falls back to the price list when an order has no saved fee', async () => {
+  assert.deepEqual(cents([line(120)], 'delivery_locker', null), { ok: true, cents: 25000 })
+  assert.deepEqual(cents([line(120)], 'delivery_locker', 'nonsense'), { ok: true, cents: 25000 })
+  assert.deepEqual(cents([line(120)], 'delivery_locker', -50), { ok: true, cents: 25000 })
 })
 
 await check('charges no courier fee on a collection order', async () => {

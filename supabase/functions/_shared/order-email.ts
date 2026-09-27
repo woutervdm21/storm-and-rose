@@ -49,6 +49,7 @@ export type Order = {
   shipping_city?: string | null
   shipping_province?: string | null
   shipping_postal?: string | null
+  delivery_fee?: number | string | null
   pudo_locker_name?: string | null
   pudo_locker_address?: string | null
 }
@@ -75,7 +76,9 @@ export const referenceFor = (id: string) => `#${String(id).slice(0, 8).toUpperCa
 
 // everything both the shop and the customer need to see about an order
 export function summarise(order: Order, lines: OrderLine[]) {
-  const method   = fulfillmentFor(order.fulfillment)
+  // the fee this order was placed at (sql/008), else today's price list
+  const listed   = fulfillmentFor(order.fulfillment)
+  const method   = { ...listed, fee: order.delivery_fee != null ? Number(order.delivery_fee) : listed.fee }
   const subtotal = (lines ?? []).reduce((sum, l) => sum + l.quantity * l.unit_price, 0)
 
   const itemRows = (lines ?? []).map((l) => {

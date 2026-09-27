@@ -43,7 +43,7 @@ const check = (name, fn) => {
   catch (err) { results.push(['FAIL', name, err.message]) }
 }
 
-// 160 + (2 x 60) = 280, plus R130 door-to-door = 410
+// 160 + (2 x 60) = 280, plus R140 door-to-door = 420
 const SUBTOTAL = 280
 
 check('EFT email quotes the subtotal when collecting', () => {
@@ -53,7 +53,7 @@ check('EFT email quotes the subtotal when collecting', () => {
 
 check('EFT email adds the courier fee when delivering', () => {
   const { html } = customerEftEmail({ ...deliveryOrder, payment_method: 'eft' }, LINES)
-  assert.ok(html.includes(money(SUBTOTAL + 130)), 'delivered total missing')
+  assert.ok(html.includes(money(SUBTOTAL + 140)), 'delivered total missing')
 })
 
 check('EFT email carries the banking details and the reference', () => {
@@ -80,7 +80,13 @@ check('paid email does NOT repeat the banking details', () => {
 check('paid email shows the delivery address for a courier order', () => {
   const { html } = customerPaidEmail(deliveryOrder, LINES)
   assert.ok(html.includes('12 Rose Street'), 'shipping address missing')
-  assert.ok(html.includes(money(SUBTOTAL + 130)), 'delivered total missing')
+  assert.ok(html.includes(money(SUBTOTAL + 140)), 'delivered total missing')
+})
+
+check('an order shows the fee it was placed at, not the current price list', () => {
+  const { html } = customerEftEmail({ ...deliveryOrder, payment_method: 'eft', delivery_fee: '130.00' }, LINES)
+  assert.ok(html.includes(money(SUBTOTAL + 130)), 'stored fee not used')
+  assert.ok(!html.includes(money(SUBTOTAL + 140)), 'price-list fee leaked in')
 })
 
 check('paid email subject reads as a receipt', () => {
