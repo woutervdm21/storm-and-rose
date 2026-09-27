@@ -1,10 +1,11 @@
-// Checkout page — captures contact info, delivery address, creates order + order_items
+// Checkout page — captures contact info, delivery address or Pudo locker, creates order + order_items
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { supabase } from '../lib/supabase'
 import { useCart } from '../context/CartContext'
 import Meta from '../components/Meta'
+import LockerPicker from '../components/LockerPicker'
 import { COLLECTION_POINTS, DELIVERY_METHODS, fulfillmentInfo, deliveryFeeFor, isDelivery } from '../lib/fulfillment'
 
 const SA_PROVINCES = [
@@ -50,7 +51,11 @@ export default function Checkout() {
   // Courier Guy method. Only the method itself is stored on the order.
   const [topChoice, setTopChoice] = useState('')
 
+  // the Pudo locker picked for a locker order ({ id, name, address })
+  const [locker, setLocker] = useState(null)
+
   const delivering  = isDelivery(form.fulfillment)
+  const toLocker    = form.fulfillment === 'delivery_locker'
   const deliveryFee = deliveryFeeFor(form.fulfillment)
   const grandTotal  = total + deliveryFee
 
@@ -67,17 +72,24 @@ export default function Checkout() {
 
   async function handleSubmit(e) {
     e.preventDefault()
+
+    // guard: a locker order needs its locker
+    if (toLocker && !locker) {
+      setError('Please choose a Pudo locker.')
+      return
+    }
+
     setSubmitting(true)
     setError(null)
 
     // create order row with contact + fulfillment info
-    // (shipping address only applies to delivery orders)
+    // (shipping address only applies to door-to-door; a locker order carries its locker)
     //
     // The customer is not signed in, and anonymous visitors are allowed to
     // write an order but not to read one — otherwise anyone could pull up
     // every customer's details. So we mint the id here and keep our own copy
     // of the row for the confirmation page, rather than asking for it back.
-    const toAddress = isDelivery(form.fulfillment)
+    const toAddress = isDelivery(form.fulfillment) && !toLocker
     const order = {
       id:               crypto.randomUUID(),
       customer_name:    form.name,
@@ -91,6 +103,12 @@ export default function Checkout() {
       shipping_city:    toAddress ? form.shipping_city : null,
       shipping_province: toAddress ? form.shipping_province : null,
       shipping_postal:  toAddress ? form.shipping_postal : null,
+      // only sent for locker orders, so the others never depend on these columns
+      ...(toLocker && {
+        pudo_locker_id:      locker.id,
+        pudo_locker_name:    locker.name,
+        pudo_locker_address: locker.address,
+      }),
     }
 
     const { error: orderError } = await supabase.from('orders').insert(order)
@@ -270,15 +288,21 @@ export default function Checkout() {
           )}
         </section>
 
-        {/* delivery address — only for delivery orders */}
-        {delivering && (
+        {/* Pudo locker — only for locker orders */}
+        {toLocker && (
+        <section className="flex flex-col gap-4">
+          <h2 className="font-serif text-lg text-rose-deep dark:text-rose-dust">Pudo Locker</h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
+            Choose the locker you'd like to collect from. We'll email your tracking number once it's sent, and you'll get an SMS with the code to open the locker when it arrives.
+          </p>
+          <LockerPicker value={locker} onChange={(l) => { setLocker(l); setError(null) }} />
+        </section>
+        )}
+
+        {/* delivery address — only for door-to-door orders */}
+        {delivering && !toLocker && (
         <section className="flex flex-col gap-4">
           <h2 className="font-serif text-lg text-rose-deep dark:text-rose-dust">Delivery Address</h2>
-          {form.fulfillment === 'delivery_locker' && (
-            <p className="text-xs text-gray-500 dark:text-gray-400 -mt-2">
-              We use your address to find your nearest Pudo locker, and confirm which one before we ship.
-            </p>
-          )}
           <Field label="Street Address">
             <input name="shipping_line1" required value={form.shipping_line1} onChange={handleChange} className="input-field" placeholder="123 Main Street" />
           </Field>

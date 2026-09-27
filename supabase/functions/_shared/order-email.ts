@@ -49,6 +49,8 @@ export type Order = {
   shipping_city?: string | null
   shipping_province?: string | null
   shipping_postal?: string | null
+  pudo_locker_name?: string | null
+  pudo_locker_address?: string | null
 }
 
 const ROSE     = '#6D2E46'
@@ -100,10 +102,13 @@ export function summarise(order: Order, lines: OrderLine[]) {
       <td style="padding:8px 0 0;text-align:right;font-weight:600;font-size:15px">${money(subtotal + method.fee)}</td>
     </tr>`
 
-  const address = [
-    order.shipping_line1, order.shipping_line2, order.shipping_city,
-    order.shipping_province, order.shipping_postal,
-  ].filter(Boolean).join(', ')
+  // a locker order goes to its locker; everything else to the customer's address
+  const address = order.pudo_locker_name
+    ? [order.pudo_locker_name, order.pudo_locker_address].filter(Boolean).join(', ')
+    : [
+        order.shipping_line1, order.shipping_line2, order.shipping_city,
+        order.shipping_province, order.shipping_postal,
+      ].filter(Boolean).join(', ')
 
   return {
     method,

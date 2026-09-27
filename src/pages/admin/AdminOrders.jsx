@@ -155,6 +155,11 @@ export default function AdminOrders() {
                       {order.shipping_line1}{order.shipping_line2 ? `, ${order.shipping_line2}` : ''}, {order.shipping_city}, {order.shipping_province} {order.shipping_postal}
                     </p>
                   )}
+                  {order.pudo_locker_name && (
+                    <p className="text-sm text-gray-500 mt-1">
+                      <span className="font-medium">Locker:</span> {order.pudo_locker_name} · {order.pudo_locker_address}
+                    </p>
+                  )}
                 </div>
 
                 {/* 3-button status selector */}
@@ -237,7 +242,7 @@ function CourierPanel({ order, onChange }) {
 
   async function book() {
     const place = COLLECTION_POINTS.find(p => p.key === from).label
-    if (!confirm(`Book Courier Guy Economy from ${place} for R ${offer.rate.toFixed(2)}? This is billed to your account.`)) return
+    if (!confirm(`Book Courier Guy ${offer.service_name} from ${place} for R ${offer.rate.toFixed(2)}? This is billed to your account.`)) return
     setBusy(true)
     setProblem(null)
     const { data, error } = await courier('book', { order_id: order.id, parcel, from, confirmed_rate: offer.rate })
@@ -310,11 +315,13 @@ function CourierPanel({ order, onChange }) {
     )
   }
 
-  // lockers need a chosen locker, which checkout doesn't collect yet
-  if (order.fulfillment !== 'delivery_door') {
+  // door-to-door, or a locker order placed after the locker picker went live —
+  // older locker orders never recorded which locker
+  const lockerChosen = order.fulfillment === 'delivery_locker' && order.pudo_locker_id
+  if (order.fulfillment !== 'delivery_door' && !lockerChosen) {
     return (
       <p className={`${box} text-gray-500`}>
-        {order.fulfillment === 'delivery_locker' ? 'Pudo locker' : 'Older delivery order'} — book it in the Courier Guy portal for now.
+        {order.fulfillment === 'delivery_locker' ? 'Pudo locker order from before the locker picker' : 'Older delivery order'} — book it in the Courier Guy portal.
       </p>
     )
   }

@@ -124,6 +124,24 @@ check('shipped email still reads right without a collection date', () => {
   assert.ok(html.includes('booked with The Courier Guy.'), 'sentence left dangling')
 })
 
+check('a locker order shows its locker instead of an address', () => {
+  const lockerOrder = {
+    ...deliveryOrder,
+    fulfillment: 'delivery_locker',
+    shipping_line1: null, shipping_line2: null, shipping_city: null, shipping_province: null, shipping_postal: null,
+    pudo_locker_name: 'Engen The Waterfront',
+    pudo_locker_address: '90 Keiskamma Drive, Aerorand, Middelburg, 1055',
+  }
+  for (const { html } of [
+    customerPaidEmail(lockerOrder, LINES),
+    shopNotificationEmail(lockerOrder, LINES),
+    customerShippedEmail(lockerOrder, LINES, COURIER),
+  ]) {
+    assert.ok(html.includes('Engen The Waterfront, 90 Keiskamma Drive'), 'locker missing')
+    assert.ok(html.includes('Pudo Locker'), 'method missing')
+  }
+})
+
 check('every email is framed with the logo and the footer', () => {
   // the logo has to be an absolute URL — a mail client cannot resolve a path
   const all = [

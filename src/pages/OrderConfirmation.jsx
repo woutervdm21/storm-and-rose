@@ -147,6 +147,14 @@ export default function OrderConfirmation() {
                 We'll contact you when your order is ready for collection.
               </p>
             </>
+          ) : stateOrder.pudo_locker_name ? (
+            <>
+              <p className="font-semibold mb-1">Delivery to your Pudo locker:</p>
+              <p className="text-gray-600 dark:text-gray-400 leading-relaxed">
+                {stateOrder.pudo_locker_name}<br />
+                {stateOrder.pudo_locker_address}
+              </p>
+            </>
           ) : (
             <>
               <p className="font-semibold mb-1">Delivery to:</p>

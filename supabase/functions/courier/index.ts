@@ -1,4 +1,4 @@
-// Books The Courier Guy for a door-to-door order, from the admin Orders page.
+// Books The Courier Guy for a door-to-door or Pudo locker order, from the admin Orders page.
 //
 //   { action: 'quote', order_id, parcel, from }                  — free price check
 //   { action: 'book',  order_id, parcel, from, confirmed_rate }  — books and bills a real collection
@@ -26,7 +26,7 @@
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import {
-  rateRequest, shipmentRequest, pickEconomy, trackingUrl,
+  rateRequest, shipmentRequest, pickRate, isLockerOrder, trackingUrl,
   getRates, createShipment, getLabel, DEFAULT_PARCEL, DEFAULT_COLLECTION,
 } from '../_shared/courier.ts'
 import { customerShippedEmail, sendEmail } from '../_shared/order-email.ts'
@@ -94,9 +94,9 @@ Deno.serve(async (req) => {
 
   if (action !== 'quote' && action !== 'book') return json({ error: 'Unknown action.' }, 400)
 
-  // only door-to-door goes through here — lockers need a chosen locker first
-  if (order.fulfillment !== 'delivery_door') {
-    return json({ error: 'Only door-to-door orders can be booked here.' }, 400)
+  // door-to-door, or a locker order that has its locker chosen
+  if (order.fulfillment !== 'delivery_door' && !(isLockerOrder(order) && order.pudo_locker_id)) {
+    return json({ error: 'Only door-to-door orders, and locker orders with a chosen locker, can be booked here.' }, 400)
   }
   if (order.courier_shipment_id) {
     return json({ error: 'This order is already booked.', tracking_ref: order.courier_tracking_ref }, 409)
@@ -112,10 +112,14 @@ Deno.serve(async (req) => {
   if (!rateBody.ok) return json({ error: `Can't quote: ${rateBody.reason}.` }, 400)
 
   const quote = await getRates(key, rateBody.body)
-  const economy = quote.ok ? pickEconomy(quote.body?.rates) : null
+  const economy = quote.ok ? pickRate(order, quote.body?.rates) : null
   if (!economy) {
     console.error('Quote failed', order.id, quote.status, quote.body)
-    return json({ error: 'Courier Guy did not return an Economy price for this address. Check the address, or book it in the portal.' }, 502)
+    return json({
+      error: isLockerOrder(order)
+        ? 'Courier Guy did not return a locker price. The box may be too big for a locker, or the locker may be offline — try a smaller box, or book it in the portal.'
+        : 'Courier Guy did not return an Economy price for this address. Check the address, or book it in the portal.',
+    }, 502)
   }
 
   const offer = {

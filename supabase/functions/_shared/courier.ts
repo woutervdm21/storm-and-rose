@@ -60,6 +60,11 @@ export const DEFAULT_PARCEL = 'small'
 // only Economy is used — the cheapest service, and the one the fee is based on
 export const SERVICE_CODES = ['ECO', 'ECOR']
 
+// Pudo lockers, as Courier Guy names them. Locker services are priced by the
+// compartment the parcel fits (codes D2LXS, D2LS, D2LM, D2LL…), and the API
+// only offers the sizes the parcel actually fits into.
+export const LOCKER_PROVIDER = 'tcg-locker'
+
 export type CourierOrder = {
   id: string
   customer_name: string
@@ -70,6 +75,8 @@ export type CourierOrder = {
   shipping_city?: string | null
   shipping_province?: string | null
   shipping_postal?: string | null
+  fulfillment?: string | null
+  pudo_locker_id?: string | null
 }
 
 export type Contact = { name: string; mobile_number: string; email: string }
@@ -110,10 +117,29 @@ export function parcelFor(key: string) {
   }
 }
 
-// body for POST /rates — a free quote
-export function rateRequest(order: CourierOrder, parcelKey: string, declaredValue: number, from: string) {
+export const isLockerOrder = (order: CourierOrder) => order.fulfillment === 'delivery_locker'
+
+// where the parcel goes: the customer's door, or the Pudo locker they chose
+function destinationFor(order: CourierOrder) {
+  if (isLockerOrder(order)) {
+    const id = order.pudo_locker_id?.trim()
+    if (!id) return { ok: false as const, reason: 'order has no Pudo locker chosen' }
+    // no declared value here — Courier Guy's own plugin notes a locker quote
+    // comes back empty when one is sent
+    return {
+      ok: true as const,
+      fields: { delivery_pickup_point_id: id, delivery_pickup_point_provider: LOCKER_PROVIDER } as Record<string, unknown>,
+    }
+  }
   const delivery = deliveryAddressFor(order)
   if (!delivery.ok) return delivery
+  return { ok: true as const, fields: { delivery_address: delivery.address } as Record<string, unknown> }
+}
+
+// body for POST /rates — a free quote
+export function rateRequest(order: CourierOrder, parcelKey: string, declaredValue: number, from: string) {
+  const destination = destinationFor(order)
+  if (!destination.ok) return destination
   const parcel = parcelFor(parcelKey)
   if (!parcel) return { ok: false as const, reason: `unknown parcel size "${parcelKey}"` }
   const point = COLLECTION_POINTS[from]
@@ -123,9 +149,9 @@ export function rateRequest(order: CourierOrder, parcelKey: string, declaredValu
     ok: true as const,
     body: {
       collection_address: point.address,
-      delivery_address:   delivery.address,
+      ...destination.fields,
       parcels:            [parcel],
-      declared_value:     declaredValue,
+      ...(isLockerOrder(order) ? {} : { declared_value: declaredValue }),
     },
   }
 }
@@ -171,6 +197,51 @@ export function pickEconomy(rates: any[]) {
     .sort((a, b) => a.rate - b.rate)[0] ?? null
 }
 
+// the cheapest door-to-locker rate — the smallest compartment the parcel fits
+export function pickLocker(rates: any[]) {
+  return (rates ?? [])
+    .filter(r => String(r?.service_level?.code ?? '').startsWith('D2L'))
+    .sort((a, b) => a.rate - b.rate)[0] ?? null
+}
+
+export const pickRate = (order: CourierOrder, rates: any[]) =>
+  isLockerOrder(order) ? pickLocker(rates) : pickEconomy(rates)
+
+// --- lockers ---------------------------------------------------------------
+
+// Courier Guy's trading hours arrive with their dashes mangled (â€“)
+const MOJIBAKE: Record<string, string> = { 'â€“': '–', 'â€”': '—', 'â€™': '’', 'Â ': ' ' }
+const unmangle = (s: string) => Object.entries(MOJIBAKE).reduce((out, [bad, good]) => out.split(bad).join(good), s)
+
+export type Locker = { id: string; name: string; address: string; hours: string; lat: number | null; lng: number | null }
+
+// the few fields a customer needs to choose a locker, skipping any that
+// are offline or hidden
+export function tidyLockers(points: any[], limit = 10): Locker[] {
+  return (points ?? [])
+    .filter(p => p?.pickup_point_provider === LOCKER_PROVIDER && p.status === 'online' && !p.is_hidden)
+    .slice(0, limit)
+    .map(p => {
+      const a = p.address ?? {}
+      // some lockers repeat the town and code inside street_address — keep each part once
+      const parts = [a.street_address, a.local_area, a.city, a.code]
+        .filter(Boolean)
+        .flatMap((part: string) => String(part).split(',').map(x => x.trim()))
+        .filter(Boolean)
+      const address = parts
+        .filter((part, i) => parts.findIndex(x => x.toLowerCase() === part.toLowerCase()) === i)
+        .join(', ')
+      return {
+        id:      p.pickup_point_id,
+        name:    p.name,
+        address: address || a.entered_address || '',
+        hours:   unmangle(p.trading_hours ?? ''),
+        lat:     a.lat ?? null,
+        lng:     a.lng ?? null,
+      }
+    })
+}
+
 // --- network ---------------------------------------------------------------
 
 async function call(path: string, key: string, init: RequestInit = {}) {
@@ -187,3 +258,14 @@ async function call(path: string, key: string, init: RequestInit = {}) {
 export const getRates     = (key: string, body: unknown) => call('/rates', key, { method: 'POST', body: JSON.stringify(body) })
 export const createShipment = (key: string, body: unknown) => call('/shipments', key, { method: 'POST', body: JSON.stringify(body) })
 export const getLabel     = (key: string, shipmentId: number) => call(`/shipments/label?id=${shipmentId}`, key)
+
+// lockers matching a town/suburb/street, or closest to a point
+export function findLockers(key: string, where: { q?: string; lat?: number; lng?: number }) {
+  const params = new URLSearchParams({ type: 'locker', order_closest: 'true' })
+  if (where.q) params.set('search', where.q)
+  if (where.lat != null && where.lng != null) {
+    params.set('lat', String(where.lat))
+    params.set('lng', String(where.lng))
+  }
+  return call(`/pickup-points?${params}`, key)
+}

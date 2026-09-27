@@ -221,6 +221,25 @@ the zone's Overview page.
 placed, triggered by `on_order_created` on the `orders` table. See that
 folder's README for the secrets and deploy steps.
 
+### Courier (The Courier Guy + Pudo lockers)
+
+- `courier` — admin-only: quote, book, waybill label. **Booking is billed**;
+  the key is live and there is no test mode.
+- `pudo-lockers` — the checkout's locker search. Read-only.
+
+Secrets: `COURIER_GUY_API_KEY` (Courier Guy portal → Integrations → API Keys),
+`COURIER_CONTACT_EMALAHLENI_NAME` / `_PHONE`, `COURIER_CONTACT_MIDDELBURG_NAME` /
+`_PHONE`, `COURIER_CONTACT_EMAIL`. Needs `sql/006` and `sql/007`.
+
+```
+npx supabase functions deploy courier      --project-ref enpyghydpklvuhaicwrr --use-api
+npx supabase functions deploy pudo-lockers --project-ref enpyghydpklvuhaicwrr --use-api
+npm run test:courier -- --quote   # free live quotes + locker search; never books
+```
+
+Both share `_shared/order-email.ts` with `order-notification` and
+`yoco-webhook`, so a change there means redeploying all four.
+
 ### Card payments (Yoco)
 
 Cards go through the Yoco gateway as a redirect checkout. Three functions and
