@@ -44,6 +44,17 @@ export default function OrderConfirmation() {
   const [retrying, setRetrying] = useState(false)
   const [total, setTotal]       = useState(state?.total ?? null)
 
+  // EFT: ask once for the amount the order was saved at — the cart's copy of a
+  // price can be out of date, and the customer must pay what the order says
+  useEffect(() => {
+    if (!orderId || outcome) return
+    let cancelled = false
+    supabase.functions.invoke('order-status', { body: { order_id: orderId } }).then(({ data }) => {
+      if (!cancelled && data?.amount_cents != null) setTotal(data.amount_cents / 100)
+    })
+    return () => { cancelled = true }
+  }, [orderId, outcome])
+
   // only a card return needs the status — the EFT flow knows it is unpaid
   useEffect(() => {
     if (!orderId || !outcome) return

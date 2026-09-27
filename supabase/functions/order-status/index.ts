@@ -32,12 +32,22 @@ Deno.serve(async (req) => {
 
   const { data } = await supabase
     .from('orders')
-    .select('status, amount_cents')
+    .select('status, amount_cents, delivery_fee, order_items(quantity, unit_price)')
     .eq('id', order_id)
     .single()
 
   if (!data) return reply({ error: 'Order not found' }, 404)
 
+  // A card order's amount is fixed when its Yoco checkout is made. An EFT
+  // order has none, so work it out here from the saved prices — which the
+  // database sets from products (sql/014), not from the customer's browser.
+  let cents = data.amount_cents
+  if (cents == null) {
+    const items = (data.order_items ?? []).reduce(
+      (sum: number, i: { quantity: number; unit_price: number }) => sum + i.quantity * Number(i.unit_price), 0)
+    cents = Math.round((items + Number(data.delivery_fee ?? 0)) * 100)
+  }
+
   // deliberately narrow — status and total, nothing about the customer
-  return reply({ status: data.status, amount_cents: data.amount_cents })
+  return reply({ status: data.status, amount_cents: cents })
 })
