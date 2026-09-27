@@ -1,4 +1,4 @@
-// Admin analytics — action alerts, KPIs, revenue chart, status breakdown, top products
+// Admin analytics — action alerts, KPIs, revenue chart, status breakdown, top products, stock levels
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
@@ -6,6 +6,7 @@ import {
   PieChart, Pie, Cell, Legend,
 } from 'recharts'
 import { supabase } from '../../lib/supabase'
+import { LOW_STOCK, stockLevel } from '../../lib/stock'
 
 const COLORS = {
   pending_payment: '#F59E0B',
@@ -13,6 +14,7 @@ const COLORS = {
   shipped:         '#3B82F6',
 }
 const BAR_COLOR = '#B5607A'
+const STOCK_COLORS = { out: '#F87171', low: '#F59E0B', ok: '#B5607A' }
 
 // alert severity config
 const SEVERITY = {
@@ -28,6 +30,7 @@ export default function AdminAnalytics() {
   const [statusData, setStatusData]     = useState([])
   const [revenueData, setRevenueData]   = useState([])
   const [topProducts, setTopProducts]   = useState([])
+  const [stock, setStock]               = useState({ units: 0, value: 0, out: 0, low: 0, byCollection: [], lowest: [] })
 
   useEffect(() => { loadAll() }, [])
 
@@ -38,7 +41,7 @@ export default function AdminAnalytics() {
       { data: items },
     ] = await Promise.all([
       supabase.from('orders').select('id, status, created_at, order_items(quantity, unit_price)'),
-      supabase.from('products').select('id, name, stock, description, image_url, category_id'),
+      supabase.from('products').select('id, name, price, stock, description, image_url, category_id, categories(name)'),
       supabase.from('order_items').select('quantity, product_id, products(name)'),
     ])
 
@@ -47,8 +50,8 @@ export default function AdminAnalytics() {
     // --- alerts ---
     const pendingPayment  = orders.filter(o => o.status === 'pending_payment')
     const paidUnshipped   = orders.filter(o => o.status === 'paid')
-    const outOfStock      = (products ?? []).filter(p => p.stock === 0)
-    const lowStock        = (products ?? []).filter(p => p.stock > 0 && p.stock <= 3)
+    const outOfStock      = (products ?? []).filter(p => stockLevel(p.stock) === 'out')
+    const lowStock        = (products ?? []).filter(p => stockLevel(p.stock) === 'low')
     const noDescription   = (products ?? []).filter(p => !p.description?.trim())
     const noImage         = (products ?? []).filter(p => !p.image_url)
     const uncategorised   = (products ?? []).filter(p => !p.category_id)
@@ -73,14 +76,14 @@ export default function AdminAnalytics() {
         icon: '🚫',
         message: `${outOfStock.length} product${outOfStock.length > 1 ? 's' : ''} out of stock`,
         action: 'Update stock',
-        to: '/admin/products',
+        to: '/admin/stock',
       },
       lowStock.length > 0 && {
         severity: 'amber',
         icon: '⚠️',
-        message: `${lowStock.length} product${lowStock.length > 1 ? 's' : ''} running low (≤3 remaining)`,
+        message: `${lowStock.length} product${lowStock.length > 1 ? 's' : ''} running low (≤${LOW_STOCK} remaining)`,
         action: 'Update stock',
-        to: '/admin/products',
+        to: '/admin/stock',
       },
       noDescription.length > 0 && {
         severity: 'blue',
@@ -159,6 +162,29 @@ export default function AdminAnalytics() {
         .slice(0, 5)
         .map(([name, units]) => ({ name, units }))
     )
+
+    // --- stock levels ---
+    const prods = products ?? []
+    const units = prods.reduce((sum, p) => sum + (p.stock ?? 0), 0)
+    const value = prods.reduce((sum, p) => sum + (p.stock ?? 0) * Number(p.price ?? 0), 0)
+    const collectionTotals = {}
+    prods.forEach(p => {
+      const name = p.categories?.name ?? 'Uncategorised'
+      collectionTotals[name] = (collectionTotals[name] ?? 0) + (p.stock ?? 0)
+    })
+    setStock({
+      units,
+      value,
+      out: outOfStock.length,
+      low: lowStock.length,
+      byCollection: Object.entries(collectionTotals)
+        .map(([name, units]) => ({ name, units }))
+        .sort((a, b) => b.units - a.units),
+      lowest: [...prods]
+        .sort((a, b) => (a.stock ?? 0) - (b.stock ?? 0) || a.name.localeCompare(b.name))
+        .slice(0, 8)
+        .map(p => ({ name: p.name, stock: p.stock ?? 0, level: stockLevel(p.stock) })),
+    })
 
     setLoading(false)
   }
@@ -269,6 +295,68 @@ export default function AdminAnalytics() {
           </ul>
         )}
       </div>
+
+      {/* stock levels */}
+      <section className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h2 className="font-serif text-lg text-rose-deep dark:text-rose-dust">Stock Levels</h2>
+          <Link to="/admin/stock" className="text-sm text-rose-mid hover:underline">Manage stock →</Link>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <KpiCard label="Units on Hand"        value={stock.units} />
+          <KpiCard label="Stock Value (retail)" value={`R ${stock.value.toFixed(2)}`} />
+          <KpiCard label="Out of Stock"         value={stock.out} highlight={stock.out > 0} />
+          <KpiCard label={`Low Stock (≤${LOW_STOCK})`} value={stock.low} highlight={stock.low > 0} />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* units per collection */}
+          <div className="bg-cream dark:bg-navy border border-rose-dust/20 rounded-xl p-6">
+            <h3 className="font-serif text-base text-rose-deep dark:text-rose-dust mb-6">Units by Collection</h3>
+            {stock.byCollection.length === 0 ? (
+              <p className="text-sm text-gray-400 text-center py-10">No products yet</p>
+            ) : (
+              <ResponsiveContainer width="100%" height={Math.max(160, stock.byCollection.length * 36)}>
+                <BarChart data={stock.byCollection} layout="vertical" margin={{ top: 0, right: 16, left: 0, bottom: 0 }}>
+                  <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
+                  <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={110} />
+                  <Tooltip formatter={v => [v, 'Units']} />
+                  <Bar dataKey="units" fill={BAR_COLOR} radius={[0, 3, 3, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
+          </div>
+
+          {/* lowest-stock products */}
+          <div className="bg-cream dark:bg-navy border border-rose-dust/20 rounded-xl p-6">
+            <h3 className="font-serif text-base text-rose-deep dark:text-rose-dust mb-6">Lowest Stock</h3>
+            {stock.lowest.length === 0 ? (
+              <p className="text-sm text-gray-400">No products yet</p>
+            ) : (
+              <ul className="space-y-3">
+                {stock.lowest.map((p, i) => (
+                  <li key={i} className="flex items-center gap-4">
+                    <span className="w-40 text-sm font-medium truncate">{p.name}</span>
+                    <div className="flex-1 bg-rose-dust/15 rounded-full h-2.5">
+                      <div
+                        className="h-2.5 rounded-full"
+                        style={{
+                          width: `${Math.min(100, (p.stock / (LOW_STOCK * 3)) * 100)}%`,
+                          backgroundColor: STOCK_COLORS[p.level],
+                        }}
+                      />
+                    </div>
+                    <span className="text-sm font-semibold w-10 text-right" style={{ color: p.level === 'ok' ? undefined : STOCK_COLORS[p.level] }}>
+                      {p.stock}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </div>
+      </section>
     </main>
   )
 }

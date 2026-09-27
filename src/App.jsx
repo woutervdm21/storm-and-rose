@@ -14,6 +14,7 @@ import AdminProducts from './pages/admin/AdminProducts'
 import AdminOrders from './pages/admin/AdminOrders'
 import AdminAnalytics from './pages/admin/AdminAnalytics'
 import AdminCategories from './pages/admin/AdminCategories'
+import AdminStock from './pages/admin/AdminStock'
 import AdminGuard from './components/AdminGuard'
 import NotFound from './pages/NotFound'
 
@@ -35,6 +36,7 @@ export default function App() {
 
           <Route element={<AdminGuard><AdminLayout /></AdminGuard>}>
             <Route path="/admin/products"   element={<AdminProducts />} />
+            <Route path="/admin/stock"      element={<AdminStock />} />
             <Route path="/admin/orders"     element={<AdminOrders />} />
             <Route path="/admin/analytics"  element={<AdminAnalytics />} />
             <Route path="/admin/categories" element={<AdminCategories />} />

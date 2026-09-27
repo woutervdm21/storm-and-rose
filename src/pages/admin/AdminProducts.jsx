@@ -178,7 +178,10 @@ export default function AdminProducts() {
     <main className="max-w-5xl mx-auto px-4 py-12 space-y-12">
       <div className="flex items-center justify-between">
         <h1 className="font-serif text-3xl text-rose-deep dark:text-rose-dust">Products</h1>
-        <a href="/admin/categories" className="text-sm text-rose-mid hover:underline">Manage categories →</a>
+        <div className="flex gap-5">
+          <a href="/admin/stock" className="text-sm text-rose-mid hover:underline">Update stock →</a>
+          <a href="/admin/categories" className="text-sm text-rose-mid hover:underline">Manage categories →</a>
+        </div>
       </div>
 
       {/* product form */}
