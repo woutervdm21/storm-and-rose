@@ -1,4 +1,4 @@
--- NOT YET APPLIED. Run the whole file in the Supabase SQL editor.
+-- APPLIED to project enpyghydpklvuhaicwrr on 2026-09-27.
 --
 -- "public insert orders" (created outside these migrations, with check true)
 -- let anyone insert an order with any status — including 'paid' or
