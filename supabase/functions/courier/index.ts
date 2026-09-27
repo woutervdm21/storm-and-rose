@@ -140,7 +140,18 @@ Deno.serve(async (req) => {
       return json({ error: 'This order has no booking to cancel.' }, 400)
     }
     const res = await cancelShipment(key, order.courier_tracking_ref)
+
+    // cancelled in the Courier Guy portal already? then there's nothing left to
+    // cancel — just tidy up the order
+    let alreadyCancelled = false
     if (!res.ok) {
+      const tracked = await trackShipment(key, order.courier_tracking_ref)
+        .then(t => (t.ok ? readTracking(t.body, order.courier_shipment_id) : null))
+        .catch(() => null)
+      alreadyCancelled = tracked?.status === 'cancelled'
+    }
+
+    if (!res.ok && !alreadyCancelled) {
       console.error('Cancel failed', order.id, order.courier_tracking_ref, res.status, res.body)
       const detail = typeof res.body === 'string' ? res.body : res.body?.message ?? ''
       return json({ error: `Courier Guy would not cancel it. ${detail}`.trim() }, 502)
