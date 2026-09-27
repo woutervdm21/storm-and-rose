@@ -1,9 +1,10 @@
 // Builds every order email the shop sends, and posts them to Resend.
 //
-// Three emails, one set of parts:
+// Four emails, one set of parts:
 //   shopNotificationEmail  — to the shop, when an order is placed
 //   customerEftEmail       — to the customer, when an EFT order is placed
 //   customerPaidEmail      — to the customer, when a card payment is confirmed
+//   customerShippedEmail   — to the customer, when the courier is booked
 //
 // The builders are pure — they take an order and its lines and return a
 // subject and some HTML — so they can be rendered and checked without sending
@@ -277,6 +278,52 @@ export function customerPaidEmail(order: Order, lines: OrderLine[]) {
 
       <p style="color:#666;font-size:13px;margin:24px 0 0">
         Keep this email as your receipt. Reply to it if anything looks wrong.
+      </p>`),
+  }
+}
+
+export function customerShippedEmail(
+  order: Order,
+  lines: OrderLine[],
+  courier: { trackingRef: string; trackingUrl: string; collectionDate?: string | null },
+) {
+  const { reference, itemsTable } = summarise(order, lines)
+
+  // Courier Guy's dates carry their own offset (+02:00); show them in SA time
+  const collected = courier.collectionDate
+    ? new Date(courier.collectionDate).toLocaleDateString('en-ZA', {
+        weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Africa/Johannesburg',
+      })
+    : null
+
+  return {
+    subject: `Your Storm & Rose order ${reference} is on its way`,
+    html: shell(`
+      <h2 style="font-family:${SERIF};font-size:20px;color:${ROSE};margin:0 0 6px">It's on its way, ${order.customer_name.split(' ')[0]}!</h2>
+      <p style="margin-top:0">
+        Your order <strong>${reference}</strong> has been booked with The Courier Guy${collected ? ` and will be collected from us on <strong>${collected}</strong>` : ''}.
+      </p>
+
+      <div style="background:${BLUSH};border:1px solid ${RULE};border-radius:10px;padding:16px;margin:16px 0;text-align:center">
+        <div style="font-size:12px;letter-spacing:1px;text-transform:uppercase;color:#8a5a68">Tracking number</div>
+        <div style="font-family:${SERIF};font-size:22px;color:${ROSE};margin:4px 0 12px">${courier.trackingRef}</div>
+        <a href="${courier.trackingUrl}"
+           style="display:inline-block;background:${ROSE};color:#ffffff;text-decoration:none;font-size:13px;padding:10px 22px;border-radius:999px">
+          Track your parcel
+        </a>
+      </div>
+
+      <p style="color:#666;font-size:13px;margin:0 0 16px">
+        The Courier Guy may also send you updates by SMS. Tracking can take a few hours to show movement after collection.
+      </p>
+
+      <h3 style="font-family:${SERIF};font-size:15px;color:${ROSE};margin:22px 0 4px">Your order</h3>
+      ${itemsTable}
+
+      ${fulfillmentBlock(order)}
+
+      <p style="color:#666;font-size:13px;margin:24px 0 0">
+        Reply to this email if anything looks wrong.
       </p>`),
   }
 }

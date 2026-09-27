@@ -1,7 +1,9 @@
 // Books The Courier Guy for a door-to-door order, from the admin Orders page.
 //
-//   { action: 'quote', order_id, parcel }                    — free price check
-//   { action: 'book',  order_id, parcel, confirmed_rate }    — books and bills a real collection
+//   { action: 'quote', order_id, parcel, from }                  — free price check
+//   { action: 'book',  order_id, parcel, from, confirmed_rate }  — books and bills a real collection
+//
+// `from` is the collection point (emalahleni | middelburg).
 //   { action: 'label', order_id }                            — waybill PDF link
 //   { action: 'release', order_id }                          — unstick a booking that never completed
 //
@@ -17,15 +19,17 @@
 //
 // Env vars (set with `supabase secrets set`):
 //   COURIER_GUY_API_KEY   — Courier Guy portal → Integrations → API Keys
-//   COURIER_CONTACT_NAME  — who the driver asks for at collection
-//   COURIER_CONTACT_PHONE — their cellphone
-//   COURIER_CONTACT_EMAIL — for Courier Guy's collection notices
+//   COURIER_CONTACT_EMALAHLENI_NAME / _PHONE — who the driver asks for there
+//   COURIER_CONTACT_MIDDELBURG_NAME / _PHONE — likewise for Middelburg
+//   COURIER_CONTACT_EMAIL — for Courier Guy's collection notices (shared)
+//   RESEND_API_KEY, ORDER_EMAIL_FROM, ORDER_EMAIL_TO — for the customer's tracking email
 
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import {
   rateRequest, shipmentRequest, pickEconomy, trackingUrl,
-  getRates, createShipment, getLabel, DEFAULT_PARCEL,
+  getRates, createShipment, getLabel, DEFAULT_PARCEL, DEFAULT_COLLECTION,
 } from '../_shared/courier.ts'
+import { customerShippedEmail, sendEmail } from '../_shared/order-email.ts'
 
 const CORS = {
   'Access-Control-Allow-Origin':  '*',
@@ -57,14 +61,14 @@ Deno.serve(async (req) => {
   const key = Deno.env.get('COURIER_GUY_API_KEY')
   if (!key) return json({ error: 'COURIER_GUY_API_KEY is not set.' }, 500)
 
-  const { action, order_id, parcel = DEFAULT_PARCEL, confirmed_rate } =
+  const { action, order_id, parcel = DEFAULT_PARCEL, from = DEFAULT_COLLECTION, confirmed_rate } =
     await req.json().catch(() => ({} as Record<string, any>))
   if (!order_id) return json({ error: 'order_id required' }, 400)
 
   // load the order, with prices from products rather than what checkout sent
   const { data: order } = await supabase
     .from('orders')
-    .select('*, order_items(quantity, products(price))')
+    .select('*, order_items(quantity, unit_price, variant, products(name, price))')
     .eq('id', order_id)
     .single()
   if (!order) return json({ error: 'Order not found.' }, 404)
@@ -104,7 +108,7 @@ Deno.serve(async (req) => {
       sum + i.quantity * Number(i.products?.price ?? 0), 0)
 
   // --- quote (also the first step of booking) ---
-  const rateBody = rateRequest(order, parcel, declaredValue)
+  const rateBody = rateRequest(order, parcel, declaredValue, from)
   if (!rateBody.ok) return json({ error: `Can't quote: ${rateBody.reason}.` }, 400)
 
   const quote = await getRates(key, rateBody.body)
@@ -131,16 +135,18 @@ Deno.serve(async (req) => {
     return json({ error: 'The price changed since you checked it. Review the new price and confirm again.', ...offer }, 409)
   }
 
+  // the person at the chosen collection point
+  const prefix = `COURIER_CONTACT_${String(from).toUpperCase()}`
   const shop = {
-    name:          Deno.env.get('COURIER_CONTACT_NAME') ?? '',
-    mobile_number: Deno.env.get('COURIER_CONTACT_PHONE') ?? '',
+    name:          Deno.env.get(`${prefix}_NAME`) ?? '',
+    mobile_number: Deno.env.get(`${prefix}_PHONE`) ?? '',
     email:         Deno.env.get('COURIER_CONTACT_EMAIL') ?? '',
   }
   if (!shop.name || !shop.mobile_number) {
-    return json({ error: 'COURIER_CONTACT_NAME and COURIER_CONTACT_PHONE must be set before booking.' }, 500)
+    return json({ error: `${prefix}_NAME and ${prefix}_PHONE must be set before booking from here.` }, 500)
   }
 
-  const shipment = shipmentRequest(order, parcel, declaredValue, offer.service_level_id, shop)
+  const shipment = shipmentRequest(order, parcel, declaredValue, from, offer.service_level_id, shop)
   if (!shipment.ok) return json({ error: `Can't book: ${shipment.reason}.` }, 400)
 
   // claim the order — only one request can move courier_booked_at off null
@@ -180,11 +186,31 @@ Deno.serve(async (req) => {
   }).eq('id', order.id)
   if (saveError) console.error('Booked but not saved', order.id, created.body.id, tracking_ref, saveError)
 
+  // tell the customer it's on its way — best effort, the booking already stands
+  let email_sent = false
+  if (tracking_ref && order.customer_email) {
+    const mail = customerShippedEmail(order, order.order_items ?? [], {
+      trackingRef:    tracking_ref,
+      trackingUrl:    trackingUrl(tracking_ref),
+      collectionDate: offer.collection_date,
+    })
+    const sent = await sendEmail({
+      to:             order.customer_email,
+      subject:        mail.subject,
+      html:           mail.html,
+      replyTo:        Deno.env.get('ORDER_EMAIL_TO'),
+      idempotencyKey: `order-shipped-${order.id}`,
+    }).catch((err) => ({ ok: false, status: 0, body: String(err) }))
+    email_sent = sent.ok
+    if (!sent.ok) console.error('Tracking email failed', order.id, sent.status, sent.body)
+  }
+
   return json({
     shipment_id:  created.body.id,
     tracking_ref,
     tracking_url: tracking_ref ? trackingUrl(tracking_ref) : null,
     rate:         offer.rate,
     collection_date: offer.collection_date,
+    email_sent,
   })
 })

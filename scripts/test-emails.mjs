@@ -9,7 +9,7 @@
 import assert from 'node:assert/strict'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import {
-  shopNotificationEmail, customerEftEmail, customerPaidEmail, EFT, money,
+  shopNotificationEmail, customerEftEmail, customerPaidEmail, customerShippedEmail, EFT, money,
 } from '../supabase/functions/_shared/order-email.ts'
 
 const LINES = [
@@ -104,12 +104,33 @@ check('a one-word name does not break the greeting', () => {
   assert.ok(html.includes('Thank you, Candice!'), 'greeting missing')
 })
 
+const COURIER = {
+  trackingRef: 'ABC123XY',
+  trackingUrl: 'https://portal.thecourierguy.co.za/track?ref=ABC123XY',
+  collectionDate: '2026-09-28T08:00:00+02:00',
+}
+
+check('shipped email carries the tracking number, link and collection day', () => {
+  const { subject, html } = customerShippedEmail(deliveryOrder, LINES, COURIER)
+  assert.match(subject, /#2F1C9D8E is on its way/)
+  assert.ok(html.includes('ABC123XY'), 'tracking number missing')
+  assert.ok(html.includes(`href="${COURIER.trackingUrl}"`), 'tracking link missing')
+  assert.ok(html.includes('Monday'), 'collection day missing')
+  assert.ok(html.includes('12 Rose Street'), 'delivery address missing')
+})
+
+check('shipped email still reads right without a collection date', () => {
+  const { html } = customerShippedEmail(deliveryOrder, LINES, { ...COURIER, collectionDate: null })
+  assert.ok(html.includes('booked with The Courier Guy.'), 'sentence left dangling')
+})
+
 check('every email is framed with the logo and the footer', () => {
   // the logo has to be an absolute URL — a mail client cannot resolve a path
   const all = [
     customerEftEmail(collectionOrder, LINES),
     customerPaidEmail(deliveryOrder, LINES),
     shopNotificationEmail(deliveryOrder, LINES),
+    customerShippedEmail(deliveryOrder, LINES, COURIER),
   ]
   for (const { html } of all) {
     assert.match(html, /<img src="https:\/\/stormandrose\.co\.za\/images\/Logo1\.png"/, 'logo missing')
@@ -134,6 +155,7 @@ if (process.argv.includes('--write')) {
     'customer-eft.html':  customerEftEmail(collectionOrder, LINES).html,
     'customer-paid.html': customerPaidEmail(deliveryOrder, LINES).html,
     'shop-card.html':     shopNotificationEmail(deliveryOrder, LINES).html,
+    'customer-shipped.html': customerShippedEmail(deliveryOrder, LINES, COURIER).html,
   }
   for (const [name, html] of Object.entries(files)) {
     writeFileSync(`.preview/${name}`, html)

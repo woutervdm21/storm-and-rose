@@ -13,7 +13,7 @@ import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
 import {
   deliveryAddressFor, rateRequest, shipmentRequest, pickEconomy, getRates,
-  COLLECTION_ADDRESS, PARCELS, DEFAULT_PARCEL,
+  COLLECTION_POINTS, DEFAULT_COLLECTION, PARCELS, DEFAULT_PARCEL,
 } from '../supabase/functions/_shared/courier.ts'
 
 // a made-up order to a public address — never a real customer
@@ -49,22 +49,26 @@ const SHOP = { name: 'Storm & Rose', mobile_number: '0820000001', email: 'shop@e
 
 // --- quote body ---
 {
-  const r = rateRequest(ORDER, DEFAULT_PARCEL, 240)
+  const r = rateRequest(ORDER, DEFAULT_PARCEL, 240, DEFAULT_COLLECTION)
   assert.equal(r.ok, true)
   assert.equal(DEFAULT_PARCEL, 'small')
-  assert.equal(r.body.collection_address, COLLECTION_ADDRESS)
+  assert.equal(DEFAULT_COLLECTION, 'emalahleni')
+  assert.equal(r.body.collection_address.city, 'Emalahleni')
+  assert.equal(rateRequest(ORDER, 'small', 240, 'middelburg').body.collection_address.city, 'Middelburg')
+  assert.equal(rateRequest(ORDER, 'small', 240, 'durban').ok, false)
   assert.equal(r.body.declared_value, 240)
   assert.deepEqual(r.body.parcels, [{
     submitted_length_cm: PARCELS.small.length, submitted_width_cm: PARCELS.small.width,
     submitted_height_cm: PARCELS.small.height, submitted_weight_kg: PARCELS.small.kg,
   }])
 
-  assert.equal(rateRequest(ORDER, 'enormous', 240).ok, false)
+  assert.equal(rateRequest(ORDER, 'enormous', 240, DEFAULT_COLLECTION).ok, false)
 }
 
 // --- booking body ---
 {
-  const s = shipmentRequest(ORDER, 'medium', 240, 264597, SHOP)
+  const s = shipmentRequest(ORDER, 'medium', 240, 'middelburg', 264597, SHOP)
+  assert.equal(s.body.collection_address, COLLECTION_POINTS.middelburg.address)
   assert.equal(s.ok, true)
   assert.equal(s.body.service_level_id, 264597)
   assert.equal(s.body.customer_reference, '#2F1C9D8E')
@@ -74,7 +78,7 @@ const SHOP = { name: 'Storm & Rose', mobile_number: '0820000001', email: 'shop@e
   assert.equal(s.body.parcels[0].submitted_description, 'Order #2F1C9D8E')
 
   // the driver needs a number to call
-  const noPhone = shipmentRequest({ ...ORDER, customer_phone: '' }, 'small', 240, 1, SHOP)
+  const noPhone = shipmentRequest({ ...ORDER, customer_phone: '' }, 'small', 240, DEFAULT_COLLECTION, 1, SHOP)
   assert.equal(noPhone.ok, false)
   assert.match(noPhone.reason, /phone/)
 }
@@ -102,14 +106,16 @@ if (process.argv.includes('--quote')) {
   }
   assert.ok(key, 'set COURIER_GUY_API_KEY or add CourierGuyAPIKey.txt')
 
-  for (const size of Object.keys(PARCELS)) {
-    const body = rateRequest(ORDER, size, 240).body
-    const res  = await getRates(key, body)
-    assert.equal(res.ok, true, `quote failed (${res.status}): ${JSON.stringify(res.body).slice(0, 300)}`)
-    const eco = pickEconomy(res.body.rates)
-    assert.ok(eco, 'no Economy rate returned')
-    assert.equal(typeof eco.service_level.id, 'number')
-    console.log(`  ${size.padEnd(6)} ${eco.service_level.name} R ${eco.rate} (service level ${eco.service_level.id})`)
+  for (const from of Object.keys(COLLECTION_POINTS)) {
+    for (const size of Object.keys(PARCELS)) {
+      const body = rateRequest(ORDER, size, 240, from).body
+      const res  = await getRates(key, body)
+      assert.equal(res.ok, true, `quote failed (${res.status}): ${JSON.stringify(res.body).slice(0, 300)}`)
+      const eco = pickEconomy(res.body.rates)
+      assert.ok(eco, 'no Economy rate returned')
+      assert.equal(typeof eco.service_level.id, 'number')
+      console.log(`  from ${from.padEnd(10)} ${size.padEnd(6)} ${eco.service_level.name} R ${eco.rate}`)
+    }
   }
   console.log('live quote: accepted by Courier Guy')
 }

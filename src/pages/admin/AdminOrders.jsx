@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '../../lib/supabase'
 import { fulfillmentInfo, deliveryFeeFor } from '../../lib/fulfillment'
-import { courier, trackingUrl, PARCELS, DEFAULT_PARCEL } from '../../lib/courier'
+import { courier, trackingUrl, PARCELS, DEFAULT_PARCEL, COLLECTION_POINTS, DEFAULT_COLLECTION } from '../../lib/courier'
 
 // visual config per status
 const STATUS_CONFIG = {
@@ -214,31 +214,33 @@ export default function AdminOrders() {
 function CourierPanel({ order, onChange }) {
   const [open, setOpen]       = useState(false)
   const [parcel, setParcel]   = useState(DEFAULT_PARCEL)
+  const [from, setFrom]       = useState(DEFAULT_COLLECTION)
   const [offer, setOffer]     = useState(null)
   const [busy, setBusy]       = useState(false)
   const [problem, setProblem] = useState(null)
 
-  // free quote whenever the panel opens or the box size changes
+  // free quote whenever the panel opens or the box or collection point changes
   useEffect(() => {
     if (!open) return
     let stale = false
     setOffer(null)
     setProblem(null)
     setBusy(true)
-    courier('quote', { order_id: order.id, parcel }).then(({ data, error }) => {
+    courier('quote', { order_id: order.id, parcel, from }).then(({ data, error }) => {
       if (stale) return
       setBusy(false)
       if (error) setProblem(error)
       else setOffer(data)
     })
     return () => { stale = true }
-  }, [open, parcel, order.id])
+  }, [open, parcel, from, order.id])
 
   async function book() {
-    if (!confirm(`Book Courier Guy Economy for R ${offer.rate.toFixed(2)}? This is billed to your account.`)) return
+    const place = COLLECTION_POINTS.find(p => p.key === from).label
+    if (!confirm(`Book Courier Guy Economy from ${place} for R ${offer.rate.toFixed(2)}? This is billed to your account.`)) return
     setBusy(true)
     setProblem(null)
-    const { data, error } = await courier('book', { order_id: order.id, parcel, confirmed_rate: offer.rate })
+    const { data, error } = await courier('book', { order_id: order.id, parcel, from, confirmed_rate: offer.rate })
     setBusy(false)
 
     if (error) {
@@ -248,6 +250,8 @@ function CourierPanel({ order, onChange }) {
       return
     }
     toast.success(`Courier booked · tracking ${data.tracking_ref}`)
+    if (data.email_sent) toast.success(`Tracking emailed to ${order.customer_email}`)
+    else toast.warning('Booked, but the tracking email did not send — pass the number on yourself.')
     onChange({
       courier_booked_at:    new Date().toISOString(),
       courier_shipment_id:  data.shipment_id,
@@ -332,8 +336,28 @@ function CourierPanel({ order, onChange }) {
 
   return (
     <div className={`${box} space-y-3`}>
+      {/* collection point */}
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-gray-500 w-24">Collect from</span>
+        {COLLECTION_POINTS.map(p => (
+          <button
+            key={p.key}
+            onClick={() => setFrom(p.key)}
+            disabled={busy}
+            className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+              from === p.key
+                ? 'border-rose-deep bg-rose-deep text-cream'
+                : 'border-rose-dust/40 hover:bg-rose-dust/10'
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
       {/* box size */}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-xs text-gray-500 w-24">Box</span>
         {PARCELS.map(p => (
           <button
             key={p.key}

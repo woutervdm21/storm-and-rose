@@ -16,18 +16,38 @@ export const API_BASE = 'https://api.portal.thecourierguy.co.za/v2'
 export const trackingUrl = (ref: string) =>
   `https://portal.thecourierguy.co.za/track?ref=${encodeURIComponent(ref)}`
 
-// Where the courier collects from. Mirrors the Emalahleni collection point in
-// src/lib/fulfillment.js.
-export const COLLECTION_ADDRESS = {
-  type:           'residential',
-  company:        'Storm & Rose',
-  street_address: '4 Judith Street',
-  local_area:     'Del Judor Ext 4',
-  city:           'Emalahleni',
-  zone:           'Mpumalanga',
-  country:        'ZA',
-  code:           '1035',
+// Where the courier can collect from — the admin picks one per booking.
+// Mirrors the collection points in src/lib/fulfillment.js. Each has its own
+// contact, set as COURIER_CONTACT_<KEY>_NAME / _PHONE (see courier/index.ts).
+export const COLLECTION_POINTS: Record<string, { label: string; address: Record<string, string> }> = {
+  emalahleni: {
+    label: 'Emalahleni',
+    address: {
+      type:           'residential',
+      company:        'Storm & Rose',
+      street_address: '4 Judith Street',
+      local_area:     'Del Judor Ext 4',
+      city:           'Emalahleni',
+      zone:           'Mpumalanga',
+      country:        'ZA',
+      code:           '1035',
+    },
+  },
+  middelburg: {
+    label: 'Middelburg',
+    address: {
+      type:           'residential',
+      company:        'Storm & Rose',
+      street_address: '23 Seinheuwel Crescent, Pebble Creek Unit 2',
+      local_area:     'Aerorand',
+      city:           'Middelburg',
+      zone:           'Mpumalanga',
+      country:        'ZA',
+      code:           '1050',
+    },
+  },
 }
+export const DEFAULT_COLLECTION = 'emalahleni'
 
 // Box presets the admin picks from when booking. Mirrors src/lib/courier.js.
 export const PARCELS: Record<string, { label: string; length: number; width: number; height: number; kg: number }> = {
@@ -91,16 +111,18 @@ export function parcelFor(key: string) {
 }
 
 // body for POST /rates — a free quote
-export function rateRequest(order: CourierOrder, parcelKey: string, declaredValue: number) {
+export function rateRequest(order: CourierOrder, parcelKey: string, declaredValue: number, from: string) {
   const delivery = deliveryAddressFor(order)
   if (!delivery.ok) return delivery
   const parcel = parcelFor(parcelKey)
   if (!parcel) return { ok: false as const, reason: `unknown parcel size "${parcelKey}"` }
+  const point = COLLECTION_POINTS[from]
+  if (!point) return { ok: false as const, reason: `unknown collection point "${from}"` }
 
   return {
     ok: true as const,
     body: {
-      collection_address: COLLECTION_ADDRESS,
+      collection_address: point.address,
       delivery_address:   delivery.address,
       parcels:            [parcel],
       declared_value:     declaredValue,
@@ -113,10 +135,11 @@ export function shipmentRequest(
   order: CourierOrder,
   parcelKey: string,
   declaredValue: number,
+  from: string,
   serviceLevelId: number,
   shop: Contact,
 ) {
-  const rate = rateRequest(order, parcelKey, declaredValue)
+  const rate = rateRequest(order, parcelKey, declaredValue, from)
   if (!rate.ok) return rate
   if (!order.customer_phone?.trim()) return { ok: false as const, reason: 'order has no phone number for the courier' }
 

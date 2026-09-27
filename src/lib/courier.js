@@ -10,6 +10,13 @@ export const PARCELS = [
 ]
 export const DEFAULT_PARCEL = 'small'
 
+// where the driver collects from — mirrors COLLECTION_POINTS on the server
+export const COLLECTION_POINTS = [
+  { key: 'emalahleni', label: 'Emalahleni' },
+  { key: 'middelburg', label: 'Middelburg' },
+]
+export const DEFAULT_COLLECTION = 'emalahleni'
+
 export const trackingUrl = (ref) =>
   `https://portal.thecourierguy.co.za/track?ref=${encodeURIComponent(ref)}`
 
