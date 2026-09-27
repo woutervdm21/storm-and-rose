@@ -7,3 +7,6 @@ supabase/.temp
 
 # rendered email previews from scripts/test-emails.mjs
 .preview/
+
+# secrets kept locally, never committed
+CourierGuyAPIKey.txt

@@ -1,8 +1,9 @@
-// Admin orders page — view, filter, and update order statuses; deducts stock on ship
+// Admin orders page — view, filter, and update order statuses; deducts stock on ship; books the courier
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { supabase } from '../../lib/supabase'
 import { fulfillmentInfo, deliveryFeeFor } from '../../lib/fulfillment'
+import { courier, trackingUrl, PARCELS, DEFAULT_PARCEL } from '../../lib/courier'
 
 // visual config per status
 const STATUS_CONFIG = {
@@ -72,6 +73,11 @@ export default function AdminOrders() {
 
     // optimistic update
     setOrders(prev => prev.map(o => o.id === order.id ? { ...o, status: newStatus } : o))
+  }
+
+  // merge courier fields into one order after a booking changes them
+  function patchOrder(id, fields) {
+    setOrders(prev => prev.map(o => (o.id === id ? { ...o, ...fields } : o)))
   }
 
   // apply active filter
@@ -190,10 +196,178 @@ export default function AdminOrders() {
                   <span>R {orderTotal.toFixed(2)}</span>
                 </li>
               </ul>
+
+              {/* courier booking — door-to-door and locker orders only */}
+              {order.fulfillment?.startsWith('delivery') && (
+                <CourierPanel order={order} onChange={fields => patchOrder(order.id, fields)} />
+              )}
             </div>
           )
         })}
       </div>
     </main>
+  )
+}
+
+// Book The Courier Guy for one order: pick a box, see the real price, confirm.
+// Nothing is booked (or billed) until "Confirm booking" is clicked.
+function CourierPanel({ order, onChange }) {
+  const [open, setOpen]       = useState(false)
+  const [parcel, setParcel]   = useState(DEFAULT_PARCEL)
+  const [offer, setOffer]     = useState(null)
+  const [busy, setBusy]       = useState(false)
+  const [problem, setProblem] = useState(null)
+
+  // free quote whenever the panel opens or the box size changes
+  useEffect(() => {
+    if (!open) return
+    let stale = false
+    setOffer(null)
+    setProblem(null)
+    setBusy(true)
+    courier('quote', { order_id: order.id, parcel }).then(({ data, error }) => {
+      if (stale) return
+      setBusy(false)
+      if (error) setProblem(error)
+      else setOffer(data)
+    })
+    return () => { stale = true }
+  }, [open, parcel, order.id])
+
+  async function book() {
+    if (!confirm(`Book Courier Guy Economy for R ${offer.rate.toFixed(2)}? This is billed to your account.`)) return
+    setBusy(true)
+    setProblem(null)
+    const { data, error } = await courier('book', { order_id: order.id, parcel, confirmed_rate: offer.rate })
+    setBusy(false)
+
+    if (error) {
+      setProblem(error)
+      if (data?.rate) setOffer(data)                                  // price moved — show the new one
+      if (data?.unconfirmed) onChange({ courier_booked_at: new Date().toISOString() })
+      return
+    }
+    toast.success(`Courier booked · tracking ${data.tracking_ref}`)
+    onChange({
+      courier_booked_at:    new Date().toISOString(),
+      courier_shipment_id:  data.shipment_id,
+      courier_tracking_ref: data.tracking_ref,
+      courier_cost:         data.rate,
+    })
+    setOpen(false)
+  }
+
+  async function printLabel() {
+    setBusy(true)
+    const { data, error } = await courier('label', { order_id: order.id })
+    setBusy(false)
+    if (error) toast.error(error)
+    else window.open(data.url, '_blank', 'noopener')
+  }
+
+  // only after checking the portal: clears a booking that never completed
+  async function release() {
+    if (!confirm('Only do this if the Courier Guy portal shows NO booking for this order. Continue?')) return
+    const { error } = await courier('release', { order_id: order.id })
+    if (error) toast.error(error)
+    else onChange({ courier_booked_at: null })
+  }
+
+  const box = 'mt-4 pt-3 border-t border-rose-dust/20 text-sm'
+  const fmtDay = (iso) => new Date(iso).toLocaleDateString('en-ZA', { weekday: 'short', day: 'numeric', month: 'short' })
+
+  // booked — tracking, label
+  if (order.courier_shipment_id) {
+    return (
+      <div className={`${box} flex flex-wrap items-center gap-x-4 gap-y-1`}>
+        <span className="font-medium text-emerald-600 dark:text-emerald-400">✓ Courier booked</span>
+        {order.courier_tracking_ref && (
+          <a href={trackingUrl(order.courier_tracking_ref)} target="_blank" rel="noopener noreferrer"
+             className="text-rose-mid hover:underline">
+            Tracking {order.courier_tracking_ref}
+          </a>
+        )}
+        {order.courier_cost != null && <span className="text-gray-500">R {Number(order.courier_cost).toFixed(2)}</span>}
+        <button onClick={printLabel} disabled={busy} className="text-rose-mid hover:underline disabled:opacity-50">
+          {busy ? 'Fetching label…' : 'Print label'}
+        </button>
+      </div>
+    )
+  }
+
+  // a booking started but never confirmed
+  if (order.courier_booked_at) {
+    return (
+      <div className={`${box} text-amber-700 dark:text-amber-400`}>
+        A booking was started {new Date(order.courier_booked_at).toLocaleString()} but not confirmed.
+        Check the Courier Guy portal for this order.{' '}
+        <button onClick={release} className="underline">Nothing was booked — let me try again</button>
+      </div>
+    )
+  }
+
+  // lockers need a chosen locker, which checkout doesn't collect yet
+  if (order.fulfillment !== 'delivery_door') {
+    return (
+      <p className={`${box} text-gray-500`}>
+        {order.fulfillment === 'delivery_locker' ? 'Pudo locker' : 'Older delivery order'} — book it in the Courier Guy portal for now.
+      </p>
+    )
+  }
+
+  // don't send what hasn't been paid for
+  if (order.status === 'pending_payment') {
+    return <p className={`${box} text-gray-500`}>Courier can be booked once the order is paid.</p>
+  }
+
+  if (!open) {
+    return (
+      <div className={box}>
+        <button onClick={() => setOpen(true)} className="text-rose-mid hover:underline font-medium">
+          Book Courier Guy →
+        </button>
+      </div>
+    )
+  }
+
+  return (
+    <div className={`${box} space-y-3`}>
+      {/* box size */}
+      <div className="flex flex-wrap gap-2">
+        {PARCELS.map(p => (
+          <button
+            key={p.key}
+            onClick={() => setParcel(p.key)}
+            disabled={busy}
+            className={`text-xs px-3 py-1.5 rounded-lg border transition-colors ${
+              parcel === p.key
+                ? 'border-rose-deep bg-rose-deep text-cream'
+                : 'border-rose-dust/40 hover:bg-rose-dust/10'
+            }`}
+          >
+            {p.label} <span className="opacity-70">· {p.detail}</span>
+          </button>
+        ))}
+      </div>
+
+      {/* quote */}
+      {busy && !offer && <p className="text-gray-500">Getting a price…</p>}
+      {offer && (
+        <p>
+          <strong>{offer.service_name} · R {offer.rate.toFixed(2)}</strong>
+          <span className="text-gray-500">
+            {' '}— collected {fmtDay(offer.collection_date)}, delivered {fmtDay(offer.delivery_from)}–{fmtDay(offer.delivery_to)}
+          </span>
+        </p>
+      )}
+      {problem && <p className="text-red-500">{problem}</p>}
+
+      <div className="flex gap-3">
+        <button onClick={book} disabled={busy || !offer} className="btn-primary !py-2 !px-5">
+          {busy && offer ? 'Booking…' : offer ? `Confirm booking — R ${offer.rate.toFixed(2)}` : 'Confirm booking'}
+        </button>
+        <button onClick={() => setOpen(false)} disabled={busy} className="btn-secondary !py-2 !px-5">Cancel</button>
+      </div>
+    </div>
   )
 }
