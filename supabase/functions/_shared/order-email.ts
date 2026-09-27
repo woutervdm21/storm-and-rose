@@ -70,6 +70,14 @@ const SERIF = "Georgia,'Times New Roman',serif"
 
 export const money = (n: number) => `R ${Number(n).toFixed(2)}`
 
+// "MR WOUTER VAN DER MERWE" → "Wouter": skip a title, and tidy all-caps names
+const TITLES = ['mr', 'mrs', 'ms', 'miss', 'dr', 'prof', 'mnr', 'mev']
+export function firstName(fullName: string) {
+  const words = String(fullName ?? '').trim().split(/\s+/).filter(Boolean)
+  const word  = words.find(w => !TITLES.includes(w.toLowerCase().replace(/\./g, ''))) ?? words[0] ?? ''
+  return word === word.toUpperCase() ? word.charAt(0) + word.slice(1).toLowerCase() : word
+}
+
 // the short code the customer uses as their EFT reference — must match
 // OrderConfirmation.jsx so payments can be matched back to orders
 export const referenceFor = (id: string) => `#${String(id).slice(0, 8).toUpperCase()}`
@@ -227,7 +235,7 @@ export function customerEftEmail(order: Order, lines: OrderLine[]) {
   return {
     subject: `Your Storm & Rose order ${reference}`,
     html: shell(`
-      <h2 style="font-family:${SERIF};font-size:20px;color:${ROSE};margin:0 0 6px">Thank you, ${order.customer_name.split(' ')[0]}!</h2>
+      <h2 style="font-family:${SERIF};font-size:20px;color:${ROSE};margin:0 0 6px">Thank you, ${firstName(order.customer_name)}!</h2>
       <p style="margin-top:0">
         We have your order ${reference}. To complete it, please pay
         <strong>${money(total)}</strong> by EFT using the details below.
@@ -268,7 +276,7 @@ export function customerPaidEmail(order: Order, lines: OrderLine[]) {
   return {
     subject: `Payment received — Storm & Rose order ${reference}`,
     html: shell(`
-      <h2 style="font-family:${SERIF};font-size:20px;color:${ROSE};margin:0 0 6px">Thank you, ${order.customer_name.split(' ')[0]}!</h2>
+      <h2 style="font-family:${SERIF};font-size:20px;color:${ROSE};margin:0 0 6px">Thank you, ${firstName(order.customer_name)}!</h2>
       <p style="margin-top:0">
         We've received your payment of <strong>${money(total)}</strong> for order
         <strong>${reference}</strong>. Nothing further is needed from you.
@@ -307,7 +315,7 @@ export function customerShippedEmail(
   return {
     subject: `Your Storm & Rose order ${reference} is on its way`,
     html: shell(`
-      <h2 style="font-family:${SERIF};font-size:20px;color:${ROSE};margin:0 0 6px">It's on its way, ${order.customer_name.split(' ')[0]}!</h2>
+      <h2 style="font-family:${SERIF};font-size:20px;color:${ROSE};margin:0 0 6px">It's on its way, ${firstName(order.customer_name)}!</h2>
       <p style="margin-top:0">
         Your order <strong>${reference}</strong> has been booked with The Courier Guy${collected ? ` and will be collected from us on <strong>${collected}</strong>` : ''}.
       </p>

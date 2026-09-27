@@ -22,6 +22,11 @@ import {
   sendEmail,
 } from '../_shared/order-email.ts'
 
+// how long to wait for checkout to finish saving the items: 8 × 0.4s. Kept
+// well under the ~5s the database's web request waits for a reply.
+const ITEM_WAIT_ATTEMPTS = 8
+const ITEM_WAIT_MS       = 400
+
 Deno.serve(async (req) => {
   // only the database webhook may call this
   if (req.headers.get('x-webhook-secret') !== Deno.env.get('WEBHOOK_SECRET')) {
@@ -35,10 +40,24 @@ Deno.serve(async (req) => {
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
   )
-  const { data: lines } = await supabase
-    .from('order_items')
-    .select('quantity, unit_price, variant, products(name)')
-    .eq('order_id', order.id)
+  // Checkout saves the items a moment AFTER the order, and this webhook fires
+  // on the order — so it can arrive before the items exist. Sending then would
+  // email an empty order asking for only the delivery fee. Wait for them.
+  let lines: any[] = []
+  for (let attempt = 0; attempt < ITEM_WAIT_ATTEMPTS; attempt++) {
+    const { data } = await supabase
+      .from('order_items')
+      .select('quantity, unit_price, variant, products(name)')
+      .eq('order_id', order.id)
+    lines = data ?? []
+    if (lines.length) break
+    await new Promise(r => setTimeout(r, ITEM_WAIT_MS))
+  }
+
+  // still nothing: the items failed to save. Tell the shop, but don't send the
+  // customer a payment request for the wrong amount.
+  const itemsMissing = lines.length === 0
+  if (itemsMissing) console.error('Order has no items after waiting', order.id)
 
   const shop = shopNotificationEmail(order, lines ?? [])
 
@@ -62,7 +81,7 @@ Deno.serve(async (req) => {
   // true have none, so this still has to cope with a missing address.
   const payingByCard = order.payment_method === 'yoco'
 
-  if (!payingByCard && order.customer_email) {
+  if (!payingByCard && order.customer_email && !itemsMissing) {
     const customer = customerEftEmail(order, lines ?? [])
 
     const customerSend = await sendEmail({

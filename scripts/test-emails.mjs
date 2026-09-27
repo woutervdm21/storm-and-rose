@@ -9,7 +9,7 @@
 import assert from 'node:assert/strict'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import {
-  shopNotificationEmail, customerEftEmail, customerPaidEmail, customerShippedEmail, EFT, money,
+  shopNotificationEmail, customerEftEmail, customerPaidEmail, customerShippedEmail, EFT, money, firstName,
 } from '../supabase/functions/_shared/order-email.ts'
 
 const LINES = [
@@ -146,6 +146,18 @@ check('a locker order shows its locker instead of an address', () => {
     assert.ok(html.includes('Engen The Waterfront, 90 Keiskamma Drive'), 'locker missing')
     assert.ok(html.includes('Pudo Locker'), 'method missing')
   }
+})
+
+check('greets by first name, skipping a title and shouting', () => {
+  assert.equal(firstName('MR WOUTER VAN DER MERWE'), 'Wouter')
+  assert.equal(firstName('Mrs. Candice van der Merwe'), 'Candice')
+  assert.equal(firstName('Dr Thandi Mokoena'), 'Thandi')
+  assert.equal(firstName('Thandi Mokoena'), 'Thandi')
+  assert.equal(firstName('Candice'), 'Candice')
+  assert.equal(firstName('Mr'), 'Mr')
+  assert.equal(firstName(''), '')
+  const { html } = customerEftEmail({ ...collectionOrder, customer_name: 'MR WOUTER VAN DER MERWE' }, LINES)
+  assert.ok(html.includes('Thank you, Wouter!'), 'greeting not tidied')
 })
 
 check('every email is framed with the logo and the footer', () => {
