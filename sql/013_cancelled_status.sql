@@ -1,5 +1,4 @@
--- NOT YET APPLIED. Run in the Supabase SQL editor BEFORE the matching code is
--- pushed — admin will start writing 'cancelled'.
+-- APPLIED to project enpyghydpklvuhaicwrr on 2026-09-27.
 --
 -- Adds a 'cancelled' order status.
 -- Status flow: pending_payment → paid → shipped → delivered, or cancelled
