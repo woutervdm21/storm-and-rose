@@ -1,4 +1,4 @@
--- NOT YET APPLIED. Run the whole file at once in the Supabase SQL editor.
+-- APPLIED to project enpyghydpklvuhaicwrr on 2026-09-27.
 --
 -- Pudo locker orders now go Locker to Locker (the shop drops the parcel at a
 -- locker), which Courier Guy prices at R79 for a Medium compartment anywhere
