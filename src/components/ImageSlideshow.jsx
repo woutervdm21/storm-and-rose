@@ -4,18 +4,24 @@ import { useEffect, useRef, useState } from 'react'
 
 const AUTO_ADVANCE_MS = 5000
 
-export default function ImageSlideshow({ images, alt, frameClass = '' }) {
+export default function ImageSlideshow({ images, alt, frameClass = '', selected = null }) {
   const [index, setIndex] = useState(0)
   const [paused, setPaused] = useState(false)
   const timer = useRef(null)
 
   const count = images.length
 
+  // jump to the photo the parent picked (e.g. a chosen variant)
   useEffect(() => {
-    if (count < 2 || paused) return
+    if (selected != null && selected >= 0) setIndex(selected)
+  }, [selected])
+
+  // auto-advance — stops once a photo is picked so it doesn't rotate away
+  useEffect(() => {
+    if (count < 2 || paused || selected != null) return
     timer.current = setInterval(() => setIndex(i => (i + 1) % count), AUTO_ADVANCE_MS)
     return () => clearInterval(timer.current)
-  }, [count, paused])
+  }, [count, paused, selected])
 
   function goTo(i) {
     setIndex((i + count) % count)

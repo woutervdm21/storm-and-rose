@@ -89,6 +89,7 @@ export default function ProductDetail() {
           images={images}
           alt={product.name}
           frameClass="rounded-2xl overflow-hidden shadow-lg bg-rose-dust/10"
+          selected={chosen ? sorted.findIndex(img => img.id === chosen.id) : null}
         />
 
         {/* product info */}
